@@ -1,0 +1,10 @@
+# Python object files
+*.pyc
+__pycache__
+*egg-info
+
+.DS_Store
+
+# testing
+.coverage
+.cache
