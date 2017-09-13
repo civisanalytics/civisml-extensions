@@ -96,11 +96,13 @@ class BaseStackedModel(BaseEstimator):
             return out
         # If deep, extract parameters from estimators too
         est_list = getattr(self, 'estimator_list')
-        out.update(self.named_base_estimators.copy())
-        out.update({self.meta_estimator_name: self.meta_estimator}.copy())
-        for name, estimator in est_list:
-            for key, value in estimator.get_params(deep=True).items():
-                out['%s__%s' % (name, key)] = value
+        # If est_list is an empty list, don't do anything else
+        if len(est_list) > 0:
+            out.update(self.named_base_estimators.copy())
+            out.update({self.meta_estimator_name: self.meta_estimator}.copy())
+            for name, estimator in est_list:
+                for key, value in estimator.get_params(deep=True).items():
+                    out['%s__%s' % (name, key)] = value
         return out
 
     def set_params(self, **params):
