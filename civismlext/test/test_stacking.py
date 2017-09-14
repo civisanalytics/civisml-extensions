@@ -200,6 +200,23 @@ def test_get_params(SM):
 
 
 @pytest.mark.parametrize('SM', [StackedClassifier, StackedRegressor])
+def test_get_params_estimator_list_empty(SM):
+    est_list = []
+
+    sm = SM(
+        est_list, cv=9, n_jobs=10, pre_dispatch=1, verbose=10)
+
+    # Check parameter getting
+    param_dict = dict(cv=9,
+                      estimator_list=est_list,
+                      n_jobs=10,
+                      pre_dispatch=1,
+                      verbose=10)
+    assert sm.get_params(deep=False) == param_dict
+    assert sm.get_params(deep=True) == param_dict
+
+
+@pytest.mark.parametrize('SM', [StackedClassifier, StackedRegressor])
 def test_set_params(SM):
     basic_est = BasicEst()
     meta_est = BasicEst()

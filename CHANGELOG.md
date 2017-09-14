@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Fixed version requirements for scikit-learn to properly import `MaskedArray` (#4).
+- In the stacking estimators, get_params no longer throws index error
+  when `estimator_list` is an empty list (#6).
 
 ## [0.1.0] - 2017-09-12
 
