@@ -208,6 +208,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         ----------
         X : pd.DataFrame
             Training or test data.
+        y : numpy array of shape [n_samples]
+            Ignored by this class.
 
         Returns
         -------
