@@ -201,13 +201,15 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         expanded_array[sentinel_entries, :] = 0.0
         return expanded_array
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         """Fit the ETL pipeline.
 
         Parameters
         ----------
         X : pd.DataFrame
             Training or test data.
+        y : numpy array of shape [n_samples]
+            Ignored by this class.
 
         Returns
         -------
