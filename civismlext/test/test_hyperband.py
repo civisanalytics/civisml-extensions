@@ -76,10 +76,15 @@ def test_smoke_hyperband(min_iter):
             [27] * 3)
         a_itrs = [[9, 3, 1], [5, 1], [3]]
 
-    # now draw the a_vals in the proper order
+    # now draw the a_vals
+    inds_to_reorder = []  # this will be a list of list of lists of the
+                          # indices for each score
+    loc = 0  # counter used to track the next index
     a_vals = []
     for bstart, nks in enumerate(a_itrs):
         a_vals_orig = ri.rvs(random_state=rng, size=nks[0]).tolist()
+        # this first element is a duplicate that is removed below
+        _inds_to_reorder = [list(np.arange(loc, loc+nks[0]))]
         for i, nk in enumerate(nks):
             scores = np.array(
                 [np.random.RandomState(seed=s).uniform()
@@ -90,9 +95,39 @@ def test_smoke_hyperband(min_iter):
             msk = msk.astype(bool)
             a_vals_orig = [a for i, a in enumerate(a_vals_orig) if msk[i]]
             a_vals += a_vals_orig
+
+            # now add the extra inds
+            _inds_to_reorder.append(list(np.arange(loc, loc+nk)))
+            loc += nk
+
+        # add the list of lists to the total
+        inds_to_reorder.append(_inds_to_reorder[1:])
+
     a_vals = np.array(a_vals)
     mn_scores = np.array(
         [np.random.RandomState(seed=a).uniform() for a in a_vals]) + b_vals
+
+    # check that we get the same set of scores back
+    # a useful tests and helps for debugging
+    assert (
+        set(mn_scores) ==
+        set(hyperband_search.cv_results_['mean_test_score'])), (
+        "The set of returned scores is wrong!")
+
+    # finally we have to swap the order of the inner and outer loops above
+    # to match our implementation of hyperband
+    # we have kept the inds corresponding to each iteration, so we just need
+    # to add up the lists in the right order
+    final_inds = []
+    max_inner = max([len(a) for a in inds_to_reorder])
+    for rnd in range(max_inner):
+        for i, inds in enumerate(inds_to_reorder):
+            if rnd < len(inds):
+                final_inds += inds[rnd]
+    # and reorder the outputs
+    mn_scores = mn_scores[final_inds]
+    a_vals = a_vals[final_inds]
+    b_vals = b_vals[final_inds]
     best_index = np.argmax(mn_scores)
 
     # now make sure it got the right values

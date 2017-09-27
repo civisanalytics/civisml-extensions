@@ -300,6 +300,8 @@ class HyperbandSearchCV(BaseSearchCV):
         smax = int(np.floor(np.log(R / Rmin) / np.log(self.eta)))
         B = (smax + 1.0) * R
 
+        # This code is hyperband, but I have swapped the order of the
+        # inner and outer loops to expose more parallelism. Fun.
         Ts = []
         ns = []
         rs = []
@@ -313,16 +315,12 @@ class HyperbandSearchCV(BaseSearchCV):
         nums = copy.copy(ns)
         offsets = [0] + list(
             np.cumsum(np.array(nums) * n_splits).astype(int))[:-1]
-        print(nums, rs)
 
         for rnd in range(0, smax + 1):
-
             # set the costs for this round
             r_rnd = []
             for ind, s in enumerate(range(smax, -1, -1)):
                 _r = int(rs[ind] * np.power(self.eta, rnd))
-                if rnd <= s:
-                    print(s, rnd, _r)
                 r_rnd += [_r] * nums[ind]
 
             # run the jobs
@@ -352,7 +350,9 @@ class HyperbandSearchCV(BaseSearchCV):
             for ind, s in enumerate(range(smax, -1, -1)):
                 n_i = int(np.floor(ns[ind] / np.power(self.eta, rnd)))
                 num_to_keep = int(np.floor(n_i / self.eta))
-                if num_to_keep > 0 and rnd <= s:
+                # keep for next round only if num_to_keep > 0 AND
+                # the round after this round would have been executed
+                if num_to_keep > 0 and rnd < s:
                     _out_s = _out[
                         offsets[ind]:offsets[ind] + nums[ind] * n_splits]
                     results, _ = self._process_outputs(_out_s, n_splits)
@@ -366,6 +366,7 @@ class HyperbandSearchCV(BaseSearchCV):
                 else:
                     new_Ts.append([])
                     new_nums.append(0)
+
             Ts = new_Ts
             nums = new_nums
             offsets = [0] + list(
