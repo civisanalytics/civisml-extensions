@@ -109,7 +109,7 @@ def test_smoke_hyperband(min_iter):
         [np.random.RandomState(seed=a).uniform() for a in a_vals]) + b_vals
 
     # check that we get the same set of scores back
-    # a useful tests and helps for debugging
+    # a useful test and helps for debugging
     assert (
         set(mn_scores) ==
         set(hyperband_search.cv_results_['mean_test_score'])), (
