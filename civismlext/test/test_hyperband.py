@@ -77,8 +77,9 @@ def test_smoke_hyperband(min_iter):
         a_itrs = [[9, 3, 1], [5, 1], [3]]
 
     # now draw the a_vals
-    inds_to_reorder = []  # this will be a list of list of lists of the
-                          # indices for each score
+    # this will be a list of list of lists of the
+    # indices for each score
+    inds_to_reorder = []
     loc = 0  # counter used to track the next index
     a_vals = []
     for bstart, nks in enumerate(a_itrs):
