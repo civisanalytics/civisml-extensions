@@ -122,7 +122,7 @@ def test_smoke_hyperband(min_iter):
     final_inds = []
     max_inner = max([len(a) for a in inds_to_reorder])
     for rnd in range(max_inner):
-        for i, inds in enumerate(inds_to_reorder):
+        for inds in inds_to_reorder:
             if rnd < len(inds):
                 final_inds += inds[rnd]
     # and reorder the outputs
