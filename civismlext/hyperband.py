@@ -4,6 +4,7 @@ from __future__ import division
 from collections import defaultdict
 from functools import partial
 import copy
+import itertools
 
 import numpy as np
 from scipy.stats import rankdata
@@ -298,45 +299,88 @@ class HyperbandSearchCV(BaseSearchCV):
         out = []
         smax = int(np.floor(np.log(R / Rmin) / np.log(self.eta)))
         B = (smax + 1.0) * R
+
+        # This code is hyperband, but I have swapped the order of the
+        # inner and outer loops to expose more parallelism. Fun.
+        Ts = []
+        ns = []
+        rs = []
         for s in range(smax, -1, -1):
-            n = int(np.ceil(B / R * np.power(self.eta, s) / (s + 1.0)))
-            r = int(R / np.power(self.eta, s))
-            T = list(ParameterSampler(self.param_distributions,
-                                      n,
-                                      random_state=self._random_state))
+            ns.append(int(np.ceil(B / R * np.power(self.eta, s) / (s + 1.0))))
+            rs.append(int(R / np.power(self.eta, s)))
+            Ts.append(list(ParameterSampler(
+                self.param_distributions,
+                ns[-1],
+                random_state=self._random_state)))
+        nums = copy.copy(ns)
+        # these are the offsets to the hyperparameter configurations for
+        # each value of s in the loop above
+        # they get updated as the loop over the different rounds get run
+        # below
+        offsets = [0] + list(
+            np.cumsum(np.array(nums) * n_splits).astype(int))[:-1]
 
-            for i in range(0, s + 1):
-                n_i = int(np.floor(n / np.power(self.eta, i)))
-                r_i = int(r * np.power(self.eta, i))
+        # iterate the maximum number of times for each resource budget
+        # configuration.
+        # If we should skip an interation, T will be an empty list
+        for rnd in range(0, smax + 1):
+            # set the costs for this round
+            r_rnd = []
+            for ind, s in enumerate(range(smax, -1, -1)):
+                _r = int(rs[ind] * np.power(self.eta, rnd))
+                r_rnd += [_r] * nums[ind]
 
-                _jobs = []
-                for parameters in T:
-                    _parameters = copy.deepcopy(parameters)
-                    _parameters.update(
-                        {list(self.cost_parameter_max.keys())[0]: r_i})
-                    for train, test in cv_iter:
-                        _jobs.append(delayed(_fit_and_score)(
-                            clone(base_estimator), X, y, self.scorer_,
-                            train, test, self.verbose, _parameters,
-                            fit_params=fit_params,
-                            return_train_score=self.return_train_score,
-                            return_n_test_samples=True,
-                            return_times=True, return_parameters=True,
-                            error_score=self.error_score))
+            # run the jobs
+            _jobs = []
+            for parameters, _r in zip(
+                    itertools.chain.from_iterable(Ts), r_rnd):
+                _parameters = copy.deepcopy(parameters)
+                _parameters.update(
+                    {list(self.cost_parameter_max.keys())[0]: _r})
+                for train, test in cv_iter:
+                    _jobs.append(delayed(_fit_and_score)(
+                        clone(base_estimator), X, y, self.scorer_,
+                        train, test, self.verbose, _parameters,
+                        fit_params=fit_params,
+                        return_train_score=self.return_train_score,
+                        return_n_test_samples=True,
+                        return_times=True, return_parameters=True,
+                        error_score=self.error_score))
+            _out = Parallel(
+                n_jobs=self.n_jobs, verbose=self.verbose,
+                pre_dispatch=pre_dispatch)(_jobs)
+            out += _out
 
-                _out = Parallel(
-                    n_jobs=self.n_jobs, verbose=self.verbose,
-                    pre_dispatch=pre_dispatch)(_jobs)
-
-                results, _ = self._process_outputs(_out, n_splits)
+            # now post-process
+            new_Ts = []
+            new_nums = []
+            for ind, s in enumerate(range(smax, -1, -1)):
+                n_i = int(np.floor(ns[ind] / np.power(self.eta, rnd)))
                 num_to_keep = int(np.floor(n_i / self.eta))
-                sind = np.argsort(results["rank_test_score"])
-                msk = np.zeros(len(results['rank_test_score']))
-                msk[sind[0:num_to_keep]] = 1
-                msk = msk.astype(bool)
-                T = [p for k, p in enumerate(results['params']) if msk[k]]
+                # keep for next round only if num_to_keep > 0 AND
+                # the round after this round will be executed
+                # in otherwords, you only need to cut the configurations
+                # down by eta if you are going to test them in the next
+                # round
+                if num_to_keep > 0 and rnd < s:
+                    _out_s = _out[
+                        offsets[ind]:(offsets[ind] + nums[ind] * n_splits)]
+                    results, _ = self._process_outputs(_out_s, n_splits)
+                    sind = np.argsort(results["rank_test_score"])
+                    msk = np.zeros(len(results['rank_test_score']))
+                    msk[sind[0:num_to_keep]] = 1
+                    msk = msk.astype(bool)
+                    new_Ts.append(
+                        [p for k, p in enumerate(results['params']) if msk[k]])
+                    new_nums.append(num_to_keep)
+                else:
+                    new_Ts.append([])
+                    new_nums.append(0)
 
-                out += _out
+            Ts = new_Ts
+            nums = new_nums
+            offsets = [0] + list(
+                np.cumsum(np.array(nums) * n_splits).astype(int))[:-1]
 
         results, best_index = self._process_outputs(out, n_splits)
         self.cv_results_ = results
