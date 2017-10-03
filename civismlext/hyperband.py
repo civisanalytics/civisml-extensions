@@ -360,7 +360,7 @@ class HyperbandSearchCV(BaseSearchCV):
                 # keep for next round only if num_to_keep > 0 AND
                 # the round after this round will be executed
                 # in otherwords, you only need to cut the configurations
-                # down by eta if yoy are going to test them in the next
+                # down by eta if you are going to test them in the next
                 # round
                 if num_to_keep > 0 and rnd < s:
                     _out_s = _out[
