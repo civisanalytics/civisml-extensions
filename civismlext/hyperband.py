@@ -313,9 +313,16 @@ class HyperbandSearchCV(BaseSearchCV):
                 ns[-1],
                 random_state=self._random_state)))
         nums = copy.copy(ns)
+        # these are the offsets to the hyperparameter configurations for
+        # each value of s in the loop above
+        # they get updated as the loop over the different rounds get run
+        # below
         offsets = [0] + list(
             np.cumsum(np.array(nums) * n_splits).astype(int))[:-1]
 
+        # iterate the maximum number of times for each resource budget
+        # configuration.
+        # If we should skip an interation, T will be an empty list
         for rnd in range(0, smax + 1):
             # set the costs for this round
             r_rnd = []
@@ -351,10 +358,13 @@ class HyperbandSearchCV(BaseSearchCV):
                 n_i = int(np.floor(ns[ind] / np.power(self.eta, rnd)))
                 num_to_keep = int(np.floor(n_i / self.eta))
                 # keep for next round only if num_to_keep > 0 AND
-                # the round after this round would have been executed
+                # the round after this round will be executed
+                # in otherwords, you only need to cut the configurations
+                # down by eta if yoy are going to test them in the next
+                # round
                 if num_to_keep > 0 and rnd < s:
                     _out_s = _out[
-                        offsets[ind]:offsets[ind] + nums[ind] * n_splits]
+                        offsets[ind]:(offsets[ind] + nums[ind] * n_splits)]
                     results, _ = self._process_outputs(_out_s, n_splits)
                     sind = np.argsort(results["rank_test_score"])
                     msk = np.zeros(len(results['rank_test_score']))
