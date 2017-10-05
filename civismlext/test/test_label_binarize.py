@@ -33,12 +33,12 @@ def test_raises_bad_inputs():
 
 
 def test_one_column_diff_class():
-    y = ['a', 'a', 'a']
-    classes = ['b']
+    y = ['a', 'a', 'c']
+    classes = ['a']
     yenc = _label_binarize(y, classes)
     assert np.array_equal(yenc, np.array([
-        [0],
-        [0],
+        [1],
+        [1],
         [0]]))
 
 
@@ -53,42 +53,42 @@ def test_one_column_same_class():
 
 
 def test_two_columns_diff_classes():
-    y = ['a', 'b', 'c']
+    y = ['a', 'c', 'b']
     classes = ['a', 'b', 'd']
     yenc = _label_binarize(y, classes)
     assert np.array_equal(yenc, np.array([
         [1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 0]]))
+        [0, 0, 0],
+        [0, 1, 0]]))
 
 
 def test_two_columns_same_classes():
     y = ['a', 'b', 'c']
-    classes = ['a', 'b', 'c']
+    classes = ['c', 'b', 'a']
     yenc = _label_binarize(y, classes)
     assert np.array_equal(yenc, np.array([
-        [1, 0, 0],
+        [0, 0, 1],
         [0, 1, 0],
-        [0, 0, 1]]))
+        [1, 0, 0]]))
 
 
 def test_three_columns_diff_classes():
-    y = ['a', 'b', 'c', 'e']
+    y = ['a', 'e', 'c', 'b']
     classes = ['b', 'a', 'c', 'f']
     yenc = _label_binarize(y, classes)
     assert np.array_equal(yenc, np.array([
         [0, 1, 0, 0],
-        [1, 0, 0, 0],
+        [0, 0, 0, 0],
         [0, 0, 1, 0],
-        [0, 0, 0, 0]]))
+        [1, 0, 0, 0]]))
 
 
 def test_three_columns_same_classes():
-    y = ['a', 'b', 'c', 'd']
+    y = ['a', 'd', 'c', 'b']
     classes = ['b', 'a', 'c', 'd']
     yenc = _label_binarize(y, classes)
     assert np.array_equal(yenc, np.array([
         [0, 1, 0, 0],
-        [1, 0, 0, 0],
+        [0, 0, 0, 1],
         [0, 0, 1, 0],
-        [0, 0, 0, 1]]))
+        [1, 0, 0, 0]]))
