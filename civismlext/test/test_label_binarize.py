@@ -14,6 +14,7 @@ def test_smoke():
         [0, 0, 1],
         [0, 0, 1]]))
 
+
 def test_raises_bad_inputs():
     with pytest.raises(ValueError):
         _label_binarize([[]], ['a', 'b'])
