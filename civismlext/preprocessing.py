@@ -18,10 +18,11 @@ def _label_binarize(y, classes):
 
     Note that this a heavily modified version of the sklearn function
     `label_binarize`. It removes some of the edge cases that function tries
-    to handle and does "simple" categorical expansion. For a given set of
-    classes, it outputs an array with the second dimension equal to
-    the number of classes with zeros where the original row is not of that
-    value and one otherwise.
+    to handle and does "simple" categorical expansion.
+
+    For a given set of classes, it outputs an array with the second
+    dimension equal to the number of classes with zeros where the original
+    row is not of that class and one otherwise. See the examples below.
 
     Parameters
     ----------
@@ -34,9 +35,35 @@ def _label_binarize(y, classes):
     -------
     yexp : numpy array of shape [n_samples, n_classes]
         Categorically expanded data.
+
+    Examples
+    --------
+    >>> from civismlext.preprocessing import _label_binarize
+    >>> _label_binarize(['a', 'a'], classes=['a'])
+    array([[1],
+           [1]])
+    >>> _label_binarize(['a', 'a'], classes=['a', 'b'])
+    array([[1, 0],
+           [1, 0]])
+    >>> _label_binarize(['a', 'c'], classes=['a', 'b'])
+    array([[1, 0],
+           [0, 0]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b'])
+    array([[1, 0],
+           [0, 0],
+           [0, 1]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c'])
+    array([[1, 0, 0],
+           [0, 0, 1],
+           [0, 1, 0]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c', 'd'])
+    array([[1, 0, 0, 0],
+           [0, 0, 1, 0],
+           [0, 1, 0, 0]])
     """
     # Preprocess data to array format.
     if not isinstance(y, list):
+        # the comment below is from sklearn v0.19
         # XXX Workaround that will be removed when list of list format is
         # dropped
         y = check_array(y, accept_sparse='csr', ensure_2d=False, dtype=None)
