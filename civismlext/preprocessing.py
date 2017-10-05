@@ -39,9 +39,10 @@ def _label_binarize(y, classes):
     Examples
     --------
     >>> from civismlext.preprocessing import _label_binarize
-    >>> _label_binarize(['a', 'a'], classes=['a'])
+    >>> _label_binarize(['a', 'a', 'c'], classes=['a'])
     array([[1],
-           [1]])
+           [1],
+           [0]])
     >>> _label_binarize(['a', 'a'], classes=['a', 'b'])
     array([[1, 0],
            [1, 0]])
