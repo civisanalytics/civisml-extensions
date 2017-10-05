@@ -7,9 +7,97 @@ from itertools import chain
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import label_binarize
 from sklearn.exceptions import NotFittedError
+from sklearn.utils.validation import check_array, _num_samples, column_or_1d
+
+
+def _label_binarize(y, classes):
+    """Categorically expand a column.
+
+    Note that this a heavily modified version of the sklearn function
+    `label_binarize`. It removes some of the edge cases that function tries
+    to handle and does "simple" categorical expansion.
+
+    For a given set of classes, it outputs an array with the second
+    dimension equal to the number of classes with zeros where the original
+    row is not of that class and one otherwise. See the examples below.
+
+    Parameters
+    ----------
+    y : array-like
+        Sequence of integer labels or multilabel data to encode.
+    classes : array-like of shape [n_classes]
+        Unique set of classes.
+
+    Returns
+    -------
+    yexp : numpy array of shape [n_samples, n_classes]
+        Categorically expanded data.
+
+    Examples
+    --------
+    >>> from civismlext.preprocessing import _label_binarize
+    >>> _label_binarize(['a', 'a', 'c'], classes=['a'])
+    array([[1],
+           [1],
+           [0]])
+    >>> _label_binarize(['a', 'a'], classes=['a', 'b'])
+    array([[1, 0],
+           [1, 0]])
+    >>> _label_binarize(['a', 'c'], classes=['a', 'b'])
+    array([[1, 0],
+           [0, 0]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b'])
+    array([[1, 0],
+           [0, 0],
+           [0, 1]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c'])
+    array([[1, 0, 0],
+           [0, 0, 1],
+           [0, 1, 0]])
+    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c', 'd'])
+    array([[1, 0, 0, 0],
+           [0, 0, 1, 0],
+           [0, 1, 0, 0]])
+    """
+    # Preprocess data to array format.
+    if not isinstance(y, list):
+        # the comment below is from sklearn v0.19
+        # XXX Workaround that will be removed when list of list format is
+        # dropped
+        y = check_array(y, accept_sparse='csr', ensure_2d=False, dtype=None)
+    else:
+        if _num_samples(y) == 0:
+            raise ValueError('y has 0 samples: %r' % y)
+    y = column_or_1d(y)
+
+    # construct sparse matrix
+    n_samples = y.shape[0] if sp.issparse(y) else len(y)
+    n_classes = len(classes)
+    classes = np.asarray(classes)
+    sorted_classes = np.sort(classes)
+
+    y_in_classes = np.in1d(y, classes)
+    y_seen = y[y_in_classes]
+    indices = np.searchsorted(sorted_classes, y_seen)
+    indptr = np.hstack((0, np.cumsum(y_in_classes)))
+
+    data = np.empty_like(indices)
+    data.fill(1)
+    yexp = sp.csr_matrix((data, indices, indptr), shape=(n_samples, n_classes))
+
+    # convert to dense
+    yexp = yexp.toarray()
+    yexp = yexp.astype(int, copy=False)
+
+    # preserve label ordering
+    if np.any(classes != sorted_classes):
+        indices = np.searchsorted(sorted_classes, classes)
+        yexp = yexp[:, indices]
+
+    return yexp
 
 
 class DataFrameETL(BaseEstimator, TransformerMixin):
@@ -168,18 +256,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         noNaN_col = self._add_sentinel(col, X[col])
 
         # perform categorical expansion
-        expanded_array = label_binarize(noNaN_col,
-                                        classes=self.levels_[col])
-
-        # if the column has one or two levels, label_binarize
-        # returns one column which is !(first level).
-        if len(self.levels_[col]) == 1:
-            expanded_array = 1 - expanded_array
-        elif len(self.levels_[col]) == 2:
-            # ensure that number of levels = number of cols,
-            # and that order is correct
-            expanded_array = np.column_stack([1-expanded_array,
-                                              expanded_array])
+        expanded_array = _label_binarize(noNaN_col,
+                                         classes=self.levels_[col])
 
         ncol = expanded_array.shape[1]
         if self._nan_numeric in self.levels_[col] or \
