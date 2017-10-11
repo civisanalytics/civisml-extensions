@@ -827,6 +827,19 @@ def test_fit_pred_simple_clf():
                         np.array([[0, 1]]))
 
 
+def test_fit_params_regression(regression_test_data):
+    xtrain = regression_test_data['x']
+    ytrain = regression_test_data['y']
+    sample_weights = [1./len(ytrain)] * len(ytrain)
+    fit_params = {'rf__sample_weight': sample_weights}
+    sr = StackedRegressor([('rf', RandomForestRegressor(random_state=7)),
+                           ('rf2', RandomForestRegressor()),
+                           ('meta', NonNegativeLinearRegression())])
+    Xmeta, ymeta, _ = sr._base_est_fit_predict(
+        xtrain, ytrain, **fit_params)
+    assert Xmeta.shape == xtrain.shape
+
+
 def fit_predict_measure_reg(model, xtrain, ytrain, xtest, ytest):
     model.fit(xtrain, ytrain)
     ypred = model.predict(xtest)
