@@ -9,6 +9,7 @@ from sklearn.utils.metaestimators import if_delegate_has_method
 from sklearn.model_selection import check_cv
 from sklearn.utils import tosequence, check_X_y
 from sklearn.externals.joblib import Parallel, delayed
+from sklearn.model_selection._validation import _index_param_value
 
 
 def _fit_est(est, X, y, **fit_params):
@@ -247,13 +248,19 @@ class BaseStackedModel(BaseEstimator):
         _jobs = []
         for train, test in cv.split(X, y):
             for name, est in self.estimator_list[:-1]:
+                # adapted from sklearn.model_selection._fit_and_predict
+                # Adjust length of sample weights
+                fit_params_est_adjusted = dict([
+                    (k, _index_param_value(X, v, train))
+                    for k, v in fit_params_ests[name].items()])
+
                 # Fit estimator on training set and score out-of-sample
                 _jobs.append(delayed(_fit_predict)(
                     clone(est),
                     X[train],
                     y[train],
                     X[test],
-                    **fit_params_ests[name]))
+                    **fit_params_est_adjusted))
 
         _out = Parallel(
             n_jobs=self.n_jobs,
