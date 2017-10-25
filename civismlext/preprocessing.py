@@ -3,6 +3,7 @@ from __future__ import division
 
 import random
 import uuid
+import warnings
 from itertools import chain
 
 import numpy as np
@@ -147,6 +148,17 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         self.dummy_na = dummy_na
         self.fill_value = fill_value
         self.dataframe_output = dataframe_output
+
+    def _flag_nulls(self, X, cols_to_drop):
+        null_cols = [col for col in X if
+                     X[col].isnull().all() and col not in cols_to_drop]
+        if len(null_cols) > 0:
+            warnings.warn('The following contain only nulls and '
+                          f'will be dropped: {null_cols}',
+                          UserWarning)
+        cols_to_drop.extend(null_cols)
+    
+        return cols_to_drop
 
     def _flag_numeric(self, levels):
         """Duck typing test for if a list is numeric-like."""
@@ -310,6 +322,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             self._cols_to_drop = []
         else:
             self._cols_to_drop = self.cols_to_drop
+        # Remove any columns which are all np.nan
+        self._cols_to_drop = self._flag_nulls(X, self._cols_to_drop)
+
         # If None, skip fit step, since we won't do any expansion
         if self.cols_to_expand is None:
             self._cols_to_expand = []
