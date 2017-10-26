@@ -154,10 +154,10 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                      X[col].isnull().all() and col not in cols_to_drop]
         if len(null_cols) > 0:
             warnings.warn('The following contain only nulls and '
-                          f'will be dropped: {null_cols}',
+                          f'will be dropped: {null_cols}',  # noqa
                           UserWarning)
         cols_to_drop.extend(null_cols)
-    
+
         return cols_to_drop
 
     def _flag_numeric(self, levels):
@@ -167,7 +167,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                 if level is not None:
                     1 + level
             is_numeric = True
-        except:
+        except TypeError:
             is_numeric = False
         return is_numeric
 
