@@ -154,7 +154,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                      X[col].isnull().all() and col not in cols_to_drop]
         if len(null_cols) > 0:
             warnings.warn('The following contain only nulls and '
-                          f'will be dropped: {null_cols}',  # noqa
+                          'will be dropped: ' + str(null_cols),
                           UserWarning)
         cols_to_drop.extend(null_cols)
 
