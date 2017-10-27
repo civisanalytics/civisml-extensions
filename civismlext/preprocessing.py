@@ -123,10 +123,12 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         Can be a float or np.nan.
     dataframe_output : bool (default: False)
         If True, ETL output is a pd.DataFrame instead of a np.Array.
-    drop_null_cols : bool (default: False)
-        If True, columns which are all nulls will issue a warning during
-        `fit` and be dropped during `transform`. If False, there will not
-        be a check for null columns (but `fit` performance will be better).
+    drop_null_cols : {None, False, 'raise', 'warn'} (default: False)
+        How columns of all nulls should be handled:
+        - None or False: do not check for null columns (best performance
+          during `fit`).
+        - 'raise': raises a RuntimeError if null columns are found
+        - 'warn': issues a warning if null columns are found
 
     Attributes
     ----------
@@ -157,11 +159,20 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
 
     def _flag_nulls(self, X, cols_to_drop):
         null_cols = [col for col in X if
-                     col not in cols_to_drop and X[col].isnull().all()]
+                     col not in cols_to_drop and
+                     pd.isnull(X[col].values[0]) and
+                     X[col].first_valid_index() is None]
         if len(null_cols) > 0:
-            warnings.warn('The following contain only nulls and '
-                          'will be dropped: ' + str(null_cols),
-                          UserWarning)
+            msg = 'The following columns contain only nulls and ' \
+                  'will be dropped: ' + str(null_cols)
+            if self.drop_null_cols == 'warn':
+                warnings.warn(msg, UserWarning)
+            elif self.drop_null_cols == 'raise':
+                raise RuntimeError(msg)
+            else:
+                raise ValueError('DataFrameETL.drop_null_cols must be '
+                                 'one of the following: [None, False, '
+                                 '"raise", or "warn"]')
         return cols_to_drop + null_cols
 
     def _flag_numeric(self, levels):

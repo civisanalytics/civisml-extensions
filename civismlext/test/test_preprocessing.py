@@ -163,8 +163,8 @@ def test_sklearn_api():
             "to a dataframe.") in str(e.value)
 
 
-def test_flag_nulls(data_raw):
-    expander = DataFrameETL()
+def test_flag_nulls_warn(data_raw):
+    expander = DataFrameETL(drop_null_cols='warn')
     drop_cols = ['col1', 'col2']
     drop_cols_2 = ['col1', 'col2', 'nantastic']
     assert expander._flag_nulls(data_raw, []) == []
@@ -181,6 +181,16 @@ def test_flag_nulls(data_raw):
         assert expander._flag_nulls(data_raw, drop_cols) == drop_cols_2
         assert len(w) == 1
         assert issubclass(w[-1].category, UserWarning)
+
+
+def test_flag_nulls_raise(data_raw):
+    expander = DataFrameETL(drop_null_cols='raise')
+    drop_cols = ['col1', 'col2']
+
+    # add a col of all nans
+    data_raw['nantastic'] = pd.Series([np.NaN] * 3)
+    with pytest.raises(RuntimeError):
+        expander._flag_nulls(data_raw, drop_cols)
 
 
 def test_flag_numeric():
@@ -481,7 +491,7 @@ def test_fit_with_nan_col(data_raw, levels_dict):
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand=['pid', 'djinn_type', 'animal'],
                             dummy_na=True,
-                            drop_null_cols=True)
+                            drop_null_cols='warn')
     with warnings.catch_warnings(record=True) as fit_w:
         expander.fit(data_raw)
         cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
@@ -495,6 +505,10 @@ def test_fit_with_nan_col(data_raw, levels_dict):
         assert len(fit_w) == 1
         assert issubclass(fit_w[-1].category, UserWarning)
         assert expander._cols_to_drop == ['fruits', 'nantastic']
+
+    with pytest.raises(RuntimeError):
+        expander.drop_null_cols = 'raise'
+        expander.fit(data_raw)
 
 
 def test_transform_notfitted(data_raw):
