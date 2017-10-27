@@ -174,12 +174,11 @@ def test_flag_nulls(data_raw):
     data_raw['nantastic'] = pd.Series([np.NaN] * 3)
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
-        assert expander._flag_nulls(data_raw, drop_cols) == drop_cols_2
-        assert len(w) == 1
-        assert issubclass(w[-1].category, UserWarning)
-
         # check that we don't add the col if it's already being dropped
         assert expander._flag_nulls(data_raw, drop_cols_2) == drop_cols_2
+        assert len(w) == 0
+
+        assert expander._flag_nulls(data_raw, drop_cols) == drop_cols_2
         assert len(w) == 1
         assert issubclass(w[-1].category, UserWarning)
 
@@ -481,7 +480,8 @@ def test_fit_with_nan_col(data_raw, levels_dict):
     data_raw['nantastic'] = pd.Series([np.NaN] * 3)
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand=['pid', 'djinn_type', 'animal'],
-                            dummy_na=True)
+                            dummy_na=True,
+                            drop_null_cols=True)
     with warnings.catch_warnings(record=True) as fit_w:
         expander.fit(data_raw)
         cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',

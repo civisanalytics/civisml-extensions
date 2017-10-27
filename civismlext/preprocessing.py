@@ -123,6 +123,10 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         Can be a float or np.nan.
     dataframe_output : bool (default: False)
         If True, ETL output is a pd.DataFrame instead of a np.Array.
+    drop_null_cols : bool (default: False)
+        If True, columns which are all nulls will issue a warning during
+        `fit` and be dropped during `transform`. If False, there will not
+        be a check for null columns (but `fit` performance will be better).
 
     Attributes
     ----------
@@ -142,23 +146,23 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                  cols_to_expand='auto',
                  dummy_na=True,
                  fill_value=0.0,
-                 dataframe_output=False):
+                 dataframe_output=False,
+                 drop_null_cols=False):
         self.cols_to_drop = cols_to_drop
         self.cols_to_expand = cols_to_expand
         self.dummy_na = dummy_na
         self.fill_value = fill_value
         self.dataframe_output = dataframe_output
+        self.drop_null_cols = drop_null_cols
 
     def _flag_nulls(self, X, cols_to_drop):
         null_cols = [col for col in X if
-                     X[col].isnull().all() and col not in cols_to_drop]
+                     col not in cols_to_drop and X[col].isnull().all()]
         if len(null_cols) > 0:
             warnings.warn('The following contain only nulls and '
                           'will be dropped: ' + str(null_cols),
                           UserWarning)
-        cols_to_drop.extend(null_cols)
-
-        return cols_to_drop
+        return cols_to_drop + null_cols
 
     def _flag_numeric(self, levels):
         """Duck typing test for if a list is numeric-like."""
@@ -323,7 +327,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         else:
             self._cols_to_drop = self.cols_to_drop
         # Remove any columns which are all np.nan
-        self._cols_to_drop = self._flag_nulls(X, self._cols_to_drop)
+        if self.drop_null_cols:
+            self._cols_to_drop = self._flag_nulls(X, self._cols_to_drop)
 
         # If None, skip fit step, since we won't do any expansion
         if self.cols_to_expand is None:
