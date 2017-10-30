@@ -123,7 +123,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         Can be a float or np.nan.
     dataframe_output : bool (default: False)
         If True, ETL output is a pd.DataFrame instead of a np.Array.
-    drop_null_cols : {None, False, 'raise', 'warn'} (default: False)
+    check_null_cols : {None, False, 'raise', 'warn'} (default: False)
         How columns of all nulls should be handled:
         - None or False: do not check for null columns (best performance
           during `fit`).
@@ -149,13 +149,13 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                  dummy_na=True,
                  fill_value=0.0,
                  dataframe_output=False,
-                 drop_null_cols=False):
+                 check_null_cols=False):
         self.cols_to_drop = cols_to_drop
         self.cols_to_expand = cols_to_expand
         self.dummy_na = dummy_na
         self.fill_value = fill_value
         self.dataframe_output = dataframe_output
-        self.drop_null_cols = drop_null_cols
+        self.check_null_cols = check_null_cols
 
     def _flag_nulls(self, X, cols_to_drop):
         null_cols = [col for col in X if
@@ -163,15 +163,15 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                      pd.isnull(X[col].values[0]) and
                      X[col].first_valid_index() is None]
         if len(null_cols) > 0:
-            if self.drop_null_cols == 'warn':
+            if self.check_null_cols == 'warn':
                 warnings.warn('The following columns contain only nulls '
                               'and will be dropped: ' + str(null_cols),
                               UserWarning)
-            elif self.drop_null_cols == 'raise':
+            elif self.check_null_cols == 'raise':
                 raise RuntimeError('The following columns contain only '
                                    'nulls: ' + str(null_cols))
             else:
-                raise ValueError('DataFrameETL.drop_null_cols must be '
+                raise ValueError('DataFrameETL.check_null_cols must be '
                                  'one of the following: [None, False, '
                                  '"raise", or "warn"]')
         return cols_to_drop + null_cols
@@ -339,7 +339,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         else:
             self._cols_to_drop = self.cols_to_drop
         # Remove any columns which are all np.nan
-        if self.drop_null_cols:
+        if self.check_null_cols:
             self._cols_to_drop = self._flag_nulls(X, self._cols_to_drop)
 
         # If None, skip fit step, since we won't do any expansion
