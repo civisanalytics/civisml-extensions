@@ -163,12 +163,13 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                      pd.isnull(X[col].values[0]) and
                      X[col].first_valid_index() is None]
         if len(null_cols) > 0:
-            msg = 'The following columns contain only nulls and ' \
-                  'will be dropped: ' + str(null_cols)
             if self.drop_null_cols == 'warn':
-                warnings.warn(msg, UserWarning)
+                warnings.warn('The following columns contain only nulls '
+                              'and will be dropped: ' + str(null_cols),
+                              UserWarning)
             elif self.drop_null_cols == 'raise':
-                raise RuntimeError(msg)
+                raise RuntimeError('The following columns contain only '
+                                   'nulls: ' + str(null_cols))
             else:
                 raise ValueError('DataFrameETL.drop_null_cols must be '
                                  'one of the following: [None, False, '
