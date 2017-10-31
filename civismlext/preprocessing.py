@@ -3,6 +3,7 @@ from __future__ import division
 
 import random
 import uuid
+import warnings
 from itertools import chain
 
 import numpy as np
@@ -122,6 +123,12 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         Can be a float or np.nan.
     dataframe_output : bool (default: False)
         If True, ETL output is a pd.DataFrame instead of a np.Array.
+    check_null_cols : {None, False, 'raise', 'warn'} (default: False)
+        How columns of all nulls should be handled:
+        - None or False: do not check for null columns (best performance
+          during `fit`).
+        - 'raise': raises a RuntimeError if null columns are found
+        - 'warn': issues a warning if null columns are found
 
     Attributes
     ----------
@@ -141,12 +148,33 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                  cols_to_expand='auto',
                  dummy_na=True,
                  fill_value=0.0,
-                 dataframe_output=False):
+                 dataframe_output=False,
+                 check_null_cols=False):
         self.cols_to_drop = cols_to_drop
         self.cols_to_expand = cols_to_expand
         self.dummy_na = dummy_na
         self.fill_value = fill_value
         self.dataframe_output = dataframe_output
+        self.check_null_cols = check_null_cols
+
+    def _flag_nulls(self, X, cols_to_drop):
+        null_cols = [col for col in X if
+                     col not in cols_to_drop and
+                     pd.isnull(X[col].values[0]) and
+                     X[col].first_valid_index() is None]
+        if len(null_cols) > 0:
+            if self.check_null_cols == 'warn':
+                warnings.warn('The following columns contain only nulls '
+                              'and will be dropped: ' + str(null_cols),
+                              UserWarning)
+            elif self.check_null_cols == 'raise':
+                raise RuntimeError('The following columns contain only '
+                                   'nulls: ' + str(null_cols))
+            else:
+                raise ValueError('DataFrameETL.check_null_cols must be '
+                                 'one of the following: [None, False, '
+                                 '"raise", or "warn"]')
+        return cols_to_drop + null_cols
 
     def _flag_numeric(self, levels):
         """Duck typing test for if a list is numeric-like."""
@@ -155,7 +183,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                 if level is not None:
                     1 + level
             is_numeric = True
-        except:
+        except TypeError:
             is_numeric = False
         return is_numeric
 
@@ -310,6 +338,10 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             self._cols_to_drop = []
         else:
             self._cols_to_drop = self.cols_to_drop
+        # Remove any columns which are all np.nan
+        if self.check_null_cols:
+            self._cols_to_drop = self._flag_nulls(X, self._cols_to_drop)
+
         # If None, skip fit step, since we won't do any expansion
         if self.cols_to_expand is None:
             self._cols_to_expand = []

@@ -3,6 +3,7 @@ from __future__ import division
 
 import pickle
 import io
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -162,6 +163,36 @@ def test_sklearn_api():
             "to a dataframe.") in str(e.value)
 
 
+def test_flag_nulls_warn(data_raw):
+    expander = DataFrameETL(check_null_cols='warn')
+    drop_cols = ['col1', 'col2']
+    drop_cols_2 = ['col1', 'col2', 'nantastic']
+    assert expander._flag_nulls(data_raw, []) == []
+    assert expander._flag_nulls(data_raw, drop_cols) == drop_cols
+
+    # add a col of all nans
+    data_raw['nantastic'] = pd.Series([np.NaN] * 3)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+        # check that we don't add the col if it's already being dropped
+        assert expander._flag_nulls(data_raw, drop_cols_2) == drop_cols_2
+        assert len(w) == 0
+
+        assert expander._flag_nulls(data_raw, drop_cols) == drop_cols_2
+        assert len(w) == 1
+        assert issubclass(w[-1].category, UserWarning)
+
+
+def test_flag_nulls_raise(data_raw):
+    expander = DataFrameETL(check_null_cols='raise')
+    drop_cols = ['col1', 'col2']
+
+    # add a col of all nans
+    data_raw['nantastic'] = pd.Series([np.NaN] * 3)
+    with pytest.raises(RuntimeError):
+        expander._flag_nulls(data_raw, drop_cols)
+
+
 def test_flag_numeric():
     test1 = [1, 'a', 'b']
     test2 = [5.55, 0, np.nan]
@@ -293,7 +324,7 @@ def test_add_sentinel(data_raw):
 
 
 def test_expand_col(data_raw):
-    expander = DataFrameETL(cols_to_drop='fruits',
+    expander = DataFrameETL(cols_to_drop=['fruits'],
                             dummy_na=True,
                             fill_value=-1.0)
     expander.fit(data_raw)
@@ -308,7 +339,7 @@ def test_expand_col(data_raw):
 
 
 def test_expand_col_no_dummy(data_raw):
-    expander = DataFrameETL(cols_to_drop='fruits',
+    expander = DataFrameETL(cols_to_drop=['fruits'],
                             dummy_na=False,
                             fill_value=-1.0)
     expander.fit(data_raw)
@@ -390,7 +421,7 @@ def test_fit_exc(dataframe_expected):
 
 def test_fit_auto(data_raw, levels_dict):
     # test auto identification of columns to expand
-    expander = DataFrameETL(cols_to_drop='fruits',
+    expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand='auto',
                             dummy_na=True)
     expander.fit(data_raw)
@@ -417,7 +448,7 @@ def test_fit_none(data_raw):
 
 def test_fit_drop_only(data_raw):
     # test dropping columns but not expanding them
-    expander = DataFrameETL(cols_to_drop='fruits',
+    expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand=None)
     expander.fit(data_raw)
     # both lists will be the same, since no cols were expanded
@@ -454,6 +485,32 @@ def test_fit_list_numeric(data_raw, levels_dict_numeric):
     assert expander.required_columns_ == ['pid', 'fruits', 'age']
 
 
+def test_fit_with_nan_col(data_raw, levels_dict):
+    # test that fit handles all-nan columns correctly
+    data_raw['nantastic'] = pd.Series([np.NaN] * 3)
+    expander = DataFrameETL(cols_to_drop=['fruits'],
+                            cols_to_expand=['pid', 'djinn_type', 'animal'],
+                            dummy_na=True,
+                            check_null_cols='warn')
+    with warnings.catch_warnings(record=True) as fit_w:
+        expander.fit(data_raw)
+        cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
+                         'djinn_type_effrit', 'djinn_type_marid',
+                         'djinn_type_sila', 'djinn_type_NaN', 'age',
+                         'animal_cat', 'animal_dog', 'animal_NaN']
+        assert expander.levels_ == levels_dict
+        assert expander.columns_ == cols_expected
+        assert expander.required_columns_ == ['pid', 'djinn_type',
+                                              'age', 'animal']
+        assert len(fit_w) == 1
+        assert issubclass(fit_w[-1].category, UserWarning)
+        assert expander._cols_to_drop == ['fruits', 'nantastic']
+
+    with pytest.raises(RuntimeError):
+        expander.check_null_cols = 'raise'
+        expander.fit(data_raw)
+
+
 def test_transform_notfitted(data_raw):
     expander = DataFrameETL()
     with pytest.raises(NotFittedError):
@@ -461,7 +518,7 @@ def test_transform_notfitted(data_raw):
 
 
 def test_transform(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=True)
     expander.fit(data_raw)
@@ -473,7 +530,7 @@ def test_transform(data_raw, dataframe_expected):
 
 
 def test_transform_no_dummy(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=False)
     expander.fit(data_raw)
@@ -489,7 +546,7 @@ def test_transform_no_dummy(data_raw, dataframe_expected):
 
 
 def test_transform_dataframe(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=True,
                             dataframe_output=True)
@@ -500,7 +557,7 @@ def test_transform_dataframe(data_raw, dataframe_expected):
 
 
 def test_transform_dataframe_no_dummy(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=False,
                             dataframe_output=True)
@@ -565,7 +622,7 @@ def test_transform_preserve_col_order(data_raw, data_raw_2,
 
 
 def test_transform_bad_expand_col(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits',
                                             'animal', 'not_in_df'],
                             dummy_na=True)
@@ -608,7 +665,7 @@ def test_refit(data_raw, data_raw_2):
 
 
 def test_pickle(data_raw, dataframe_expected):
-    expander = DataFrameETL(cols_to_drop='pid',
+    expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=True)
     expander.fit(data_raw)
