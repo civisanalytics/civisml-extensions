@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.5] - 2017-10-27
 
 ### Added
-- Added `drop_null_cols` argument to check for null columns (#13)
+- Added `check_null_cols` argument to check for null columns (#13)
 
 ## [0.1.4] - 2017-10-11
 
