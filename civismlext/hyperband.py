@@ -24,6 +24,40 @@ from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
 
 
+class PowerUnifSampler(object):
+    """A sampler that samples from the following distribution:
+    ~10**(Uniform(0,1)*scale + loc)
+    Where "scale" and "loc" are parameters chosen by the user.
+    This sampler can be used in conjunction with HyperbandSearchCV
+    as a distribution in the estimator's 'param_distributions'.
+
+    Parameters
+    ----------
+    loc : float
+        An offset for the distribution, which defines the lower
+        bound of the distribution. Defaults to 0, for a lower
+        bound of 10**0.
+    scale : float
+        A scaling parameter for the uniform distribution. Defaults to 1,
+        for an underlying uniform distribution on the bounds (0,1).
+    """
+    def __init__(self, loc=0, scale=1):
+        self._loc = loc
+        self._scale = scale
+
+    def rvs(self, *args, **kwargs):
+        """Draws a random value from the sampler. If a 'random_state'
+        is given in **kwargs, it is used to set the random seed."""
+        if 'random_state' in kwargs:
+            seed = kwargs['random_state']
+        else:
+            seed = None
+
+        self._rng = check_random_state(seed)
+        lr = self._rng.uniform() * self._scale + self._loc
+        return np.power(10.0, lr)
+
+
 def hyperband_num_per_run(eta, R, Rmin):
     num = 0
     smax = int(np.floor(np.log(R / Rmin) / np.log(eta)))
