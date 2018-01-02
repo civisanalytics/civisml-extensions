@@ -1,5 +1,5 @@
 scikit-learn>=0.18.1,<0.20
-scipy~=0.14
+scipy>=0.14,<2.0
 numpy~=1.10
 pandas~=0.19
 six~=1.10
