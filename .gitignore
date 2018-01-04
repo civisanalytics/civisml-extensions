@@ -8,3 +8,6 @@ __pycache__
 # testing
 .coverage
 .cache
+
+# PyCharm
+.idea
