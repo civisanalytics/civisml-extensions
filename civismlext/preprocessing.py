@@ -1,104 +1,14 @@
 from __future__ import print_function
 from __future__ import division
 
-import random
 import uuid
 import warnings
 from itertools import chain
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
-from sklearn.utils.validation import check_array, _num_samples, column_or_1d
-
-
-def _label_binarize(y, classes):
-    """Categorically expand a column.
-
-    Note that this a heavily modified version of the sklearn function
-    `label_binarize`. It removes some of the edge cases that function tries
-    to handle and does "simple" categorical expansion.
-
-    For a given set of classes, it outputs an array with the second
-    dimension equal to the number of classes with zeros where the original
-    row is not of that class and one otherwise. See the examples below.
-
-    Parameters
-    ----------
-    y : array-like
-        Sequence of integer labels or multilabel data to encode.
-    classes : array-like of shape [n_classes]
-        Unique set of classes.
-
-    Returns
-    -------
-    yexp : numpy array of shape [n_samples, n_classes]
-        Categorically expanded data.
-
-    Examples
-    --------
-    >>> from civismlext.preprocessing import _label_binarize
-    >>> _label_binarize(['a', 'a', 'c'], classes=['a'])
-    array([[1],
-           [1],
-           [0]])
-    >>> _label_binarize(['a', 'a'], classes=['a', 'b'])
-    array([[1, 0],
-           [1, 0]])
-    >>> _label_binarize(['a', 'c'], classes=['a', 'b'])
-    array([[1, 0],
-           [0, 0]])
-    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b'])
-    array([[1, 0],
-           [0, 0],
-           [0, 1]])
-    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c'])
-    array([[1, 0, 0],
-           [0, 0, 1],
-           [0, 1, 0]])
-    >>> _label_binarize(['a', 'c', 'b'], classes=['a', 'b', 'c', 'd'])
-    array([[1, 0, 0, 0],
-           [0, 0, 1, 0],
-           [0, 1, 0, 0]])
-    """
-    # Preprocess data to array format.
-    if not isinstance(y, list):
-        # the comment below is from sklearn v0.19
-        # XXX Workaround that will be removed when list of list format is
-        # dropped
-        y = check_array(y, accept_sparse='csr', ensure_2d=False, dtype=None)
-    else:
-        if _num_samples(y) == 0:
-            raise ValueError('y has 0 samples: %r' % y)
-    y = column_or_1d(y)
-
-    # construct sparse matrix
-    n_samples = y.shape[0] if sp.issparse(y) else len(y)
-    n_classes = len(classes)
-    classes = np.asarray(classes)
-    sorted_classes = np.sort(classes)
-
-    y_in_classes = np.in1d(y, classes)
-    y_seen = y[y_in_classes]
-    indices = np.searchsorted(sorted_classes, y_seen)
-    indptr = np.hstack((0, np.cumsum(y_in_classes)))
-
-    data = np.empty_like(indices)
-    data.fill(1)
-    yexp = sp.csr_matrix((data, indices, indptr), shape=(n_samples, n_classes))
-
-    # convert to dense
-    yexp = yexp.toarray()
-    yexp = yexp.astype(int, copy=False)
-
-    # preserve label ordering
-    if np.any(classes != sorted_classes):
-        indices = np.searchsorted(sorted_classes, classes)
-        yexp = yexp[:, indices]
-
-    return yexp
 
 
 class DataFrameETL(BaseEstimator, TransformerMixin):
@@ -176,33 +86,14 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                                  '"raise", or "warn"]')
         return cols_to_drop + null_cols
 
-    def _flag_numeric(self, levels):
-        """Duck typing test for if a list is numeric-like."""
-        try:
-            for level in levels:
-                if level is not None:
-                    1 + level
-            is_numeric = True
-        except TypeError:
-            is_numeric = False
-        return is_numeric
-
     def _check_sentinels(self, X):
-        """Replace default sentinels with random values if defaults appear
+        """Replace default sentinel with random values if the default appears
         in the data."""
+        vals = chain.from_iterable(pd.unique(X[col]).tolist() for
+                                   col in self._cols_to_expand)
 
-        numeric_vals = chain.from_iterable(
-            pd.unique(X[col]).tolist() for col in self._cols_to_expand
-            if self._is_numeric[col])
-        other_vals = chain.from_iterable(
-            np.array(pd.unique(X[col])).tolist() for
-            col in self._cols_to_expand
-            if not self._is_numeric[col])
-
-        while any(u == self._nan_numeric for u in numeric_vals):
-            self._nan_numeric = random.randint(0, 1e6)
-        while any(u == self._nan_string for u in other_vals):
-            self._nan_string = uuid.uuid4().hex
+        while any(u == self._nan_sentinel for u in vals):
+            self._nan_sentinel = uuid.uuid4().hex
 
     def _create_levels(self, X):
         """Create levels for each column in cols_to_expand."""
@@ -217,10 +108,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             # Note that even if we don't include a dummy_na column, we still
             # need to keep track of missing values internally for fill_value
             if self.dummy_na or any(X[col].isnull()):
-                if self._is_numeric[col]:
-                    levels[col].extend([self._nan_numeric])
-                else:
-                    levels[col].extend([self._nan_string])
+                levels[col].extend([self._nan_sentinel])
         return levels
 
     def _create_col_names(self, X):
@@ -240,71 +128,59 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # it with 'NaN'. If 'NaN' is already a level, use the
                     # sentinel to prevent column name duplicates.
                     if 'NaN' in col_levels:
-                        expanded_names = ['%s_%s' % (col, self._nan_string) if
-                                          cat in
-                                          [self._nan_string, self._nan_numeric]
+                        expanded_names = ['%s_%s' % (col, self._nan_sentinel)
+                                          if cat == self._nan_sentinel
                                           else '%s_%s' % (col, cat) for cat in
                                           col_levels]
                     else:
-                        expanded_names = ['%s_NaN' % (col) if cat in
-                                          [self._nan_string, self._nan_numeric]
+                        expanded_names = ['%s_NaN' % (col)
+                                          if cat == self._nan_sentinel
                                           else '%s_%s' % (col, cat) for cat in
                                           col_levels]
                 else:
                     # if the final data frame will not have a dummy na column,
                     # don't include it in the unexpanded list.
                     expanded_names = ['%s_%s' % (col, cat) for cat in
-                                      col_levels if cat not in
-                                      [self._nan_string, self._nan_numeric]]
+                                      col_levels if cat != self._nan_sentinel]
                 cnames.extend(expanded_names)
             else:
                 cnames.append(col)
 
         return cnames, unexpanded_cnames
 
-    def _add_sentinel(self, col, nan_col):
-        """Add a sentinel for NaN values."""
-        if self._is_numeric[col]:
-            nan_col = nan_col.fillna(self._nan_numeric)
-        else:
-            nan_col = nan_col.astype('object').fillna(self._nan_string)
-        return nan_col
-
     def _expand_col(self, X, col):
         """Perform categorical expansion on a single column."""
-        # find any values in the data that match the sentinel
-        if self._is_numeric[col]:
-            sentinel_entries = np.where(np.equal(X[col].values,
-                                                 self._nan_numeric))
+        # Convert the input to a categorical and fill missing
+        # values with our sentinel. If the input has sentinels already,
+        # then it's a category not seen during the fit and should
+        # be ignored in the expansion.
+        catcol = X[col].astype('category')
+        if self._nan_sentinel not in catcol.cat.categories:
+            catcol = catcol.cat.add_categories(self._nan_sentinel)
+            sentinel_entries = None
         else:
-            sentinel_entries = np.where(np.equal(X[col].values,
-                                                 self._nan_string))
+            sentinel_entries = (catcol == self._nan_sentinel)
+        catcol = catcol.fillna(self._nan_sentinel)
 
-        # replace nans with sentinel value
-        noNaN_col = self._add_sentinel(col, X[col])
+        # One-hot-encode the array, using the levels seen during fit.
+        # When we expand, the only missing values will be categories
+        # not seen during fit. We ignore those when encoding
+        # by using `dummy_na=False`.
+        newcat = catcol.cat.set_categories(self.levels_[col])
+        expanded_array = pd.get_dummies(newcat, dummy_na=False)
+        expanded_array = expanded_array.values.astype('float32')
 
-        # perform categorical expansion
-        expanded_array = _label_binarize(noNaN_col,
-                                         classes=self.levels_[col])
-
-        ncol = expanded_array.shape[1]
-        if self._nan_numeric in self.levels_[col] or \
-           self._nan_string in self.levels_[col]:
-            # fill in self.fill_value for nan sentinels
-            # the nan column will be the last one, because it
-            # is appended after other levels are determined
-            inds = np.where(expanded_array[:, ncol - 1] == 1)
-            expanded_array = expanded_array.astype('float32')
-            expanded_array[inds, 0:(ncol-1)] = np.float32(self.fill_value)
+        is_nan = (newcat == self._nan_sentinel)
+        if is_nan.any():
+            expanded_array[is_nan, :-1] = self.fill_value
             if not self.dummy_na:
                 # Drop the last column, which is the nan column
-                expanded_array = expanded_array[:, 0:(ncol-1)]
-        else:
-            expanded_array = expanded_array.astype('float32')
+                expanded_array = expanded_array[:, :-1]
 
         # replace sentinel entries which were treated like nans to
         # 0 in the final array
-        expanded_array[sentinel_entries, :] = 0.0
+        if sentinel_entries is not None:
+            expanded_array[sentinel_entries, :] = 0.0
         return expanded_array
 
     def fit(self, X, y=None):
@@ -323,16 +199,10 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         """
         if not isinstance(X, pd.DataFrame):
             raise TypeError("ETL transformer must be fit to a dataframe.")
+
         # set default values
-        #  _nan_string is a temporary sentinel for np.nan values in
-        # non-numeric columns.
-        # _nan_numeric is a temporary sentinel for np.nan values in numeric
-        # columns.
-        self._nan_string = 'NaN_Sentinel'
-        self._nan_numeric = -99999.0
-        # _is_numeric: dictionary of column names and a boolean flag, which
-        # is True if the column is numeric
-        self._is_numeric = {}
+        #  _nan_sentinel is a temporary sentinel for np.nan values
+        self._nan_sentinel = 'NaN_Sentinel'
         self.levels_ = {}
         if self.cols_to_drop is None:
             self._cols_to_drop = []
@@ -352,10 +222,6 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             else:
                 self._cols_to_expand = [c for c in self.cols_to_expand if
                                         c in X.columns]
-            # Flag for numeric columns
-            for col in self._cols_to_expand:
-                self._is_numeric[col] = self._flag_numeric(
-                    pd.unique(X[col]))
             # Update sentinels if the defaults are in the dataframe
             self._check_sentinels(X)
             self.levels_ = self._create_levels(X)
