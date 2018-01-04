@@ -45,6 +45,8 @@ example of using the ``StackedClassifier``::
     >>> # Predict!
     >>> ypred = mysm.predict_proba(Xtest)
 
+You can learn more about stacking and see an example use of the  ``StackedRegressor`` and ``NonNegativeLinearRegression`` estimators in `a talk presented at PyData NYC`_ in November, 2017.
+
 See the doc strings of the various estimators for more information.
 
 Contributing
@@ -62,3 +64,4 @@ See ``LICENSE.md`` for details.
 .. _scikit-learn: http://scikit-learn.org/
 .. _pandas: http://pandas.pydata.org/
 .. _Hyperband: https://arxiv.org/abs/1603.06560
+.. _a talk presented at PyData NYC: https://www.youtube.com/watch?v=3gpf1lGwecA
