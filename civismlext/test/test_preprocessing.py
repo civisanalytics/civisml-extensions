@@ -641,7 +641,7 @@ def test_pickle(data_raw):
 
 def test_categorical_looks_like_int():
     # Verify that the right thing happens if the fit DataFrame has a
-    # categorical with
+    # categorical with integer categories
     raw = pd.concat([
             pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
             pd.Series([500, 1000, 1000], dtype='category', name='intcat'),
@@ -654,3 +654,18 @@ def test_categorical_looks_like_int():
     assert_almost_equal(tfm, exp)
     assert expander.columns_ == \
         ['fruits', 'intcat_500', 'intcat_1000', 'intcat_NaN']
+
+
+def test_categorical_mixed_type_levels():
+    # Use a category with both strings and integers in its categories
+    raw = pd.concat([
+            pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
+            pd.Series([500, np.NaN, 'cat'], dtype='category', name='mixed'),
+        ], axis=1)
+    expander = DataFrameETL(cols_to_expand='auto', dummy_na=False)
+    tfm = expander.fit_transform(raw)
+    exp = np.array([[1, 1, 0],
+                    [np.nan, 0, 0],
+                    [3, 0, 1]])
+    assert_almost_equal(tfm, exp)
+    assert expander.columns_ == ['fruits', 'mixed_500', 'mixed_cat']
