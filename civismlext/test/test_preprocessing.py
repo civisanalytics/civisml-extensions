@@ -30,7 +30,6 @@ from civismlext.preprocessing import DataFrameETL
 
 
 NAN_STRING = 'NaN_Sentinel'
-NAN_NUMERIC = -99999.0
 
 
 @pytest.fixture()
@@ -128,7 +127,7 @@ def levels_dict():
 @pytest.fixture()
 def levels_dict_numeric():
     levels = {'pid': ['a', 'b', 'c', NAN_STRING],
-              'fruits': [1.0, 3.0, NAN_NUMERIC]}
+              'fruits': [1.0, 3.0, NAN_STRING]}
     return levels
 
 
@@ -193,40 +192,28 @@ def test_flag_nulls_raise(data_raw):
         expander._flag_nulls(data_raw, drop_cols)
 
 
-def test_flag_numeric():
-    test1 = [1, 'a', 'b']
-    test2 = [5.55, 0, np.nan]
-    expander = DataFrameETL()
-    assert expander._flag_numeric(test1) is False
-    assert expander._flag_numeric(test2) is True
-
-
 def test_check_sentinels(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type',
                                             'animal', 'fruits'])
     # fill in necessary parameters
-    expander._nan_string = 'effrit'
-    expander._nan_numeric = 1.0
-    expander._is_numeric = {}
+    expander._nan_sentinel = 'effrit'
     expander.levels_ = {}
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
-    for col in expander.cols_to_expand:
-        expander._is_numeric[col] = expander._flag_numeric(
-            pd.unique(data_raw[col]))
     expander._check_sentinels(data_raw)
-    assert expander._nan_string is not 'effrit'
-    assert expander._nan_numeric is not 1.0
+    assert expander._nan_sentinel is not 'effrit'
     assert not (data_raw[['pid', 'djinn_type', 'animal']] ==
-                expander._nan_string).any().any()
-    assert not (data_raw['fruits'] == expander._nan_numeric).any().any()
+                expander._nan_sentinel).any().any()
+
+    # The NaN sentinel can't be in the "fruits" column because
+    # "fruits" is numeric and the sentinel is not.
+    assert np.issubdtype(data_raw['fruits'].dtype, np.number)
+    assert not np.issubdtype(type(expander._nan_sentinel), np.number)
 
 
 def test_create_levels(data_raw, levels_dict):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'])
-    expander._is_numeric = {'pid': 0, 'djinn_type': 0, 'animal': 0}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
+    expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     actual_levels = expander._create_levels(data_raw)
@@ -238,9 +225,7 @@ def test_create_levels_no_dummy(data_raw, levels_dict_numeric):
                             dummy_na=False)
     # remove nan from pid levels
     levels_dict_numeric['pid'] = ['a', 'b', 'c']
-    expander._is_numeric = {'pid': 0, 'fruits': 1}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
+    expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     actual_levels = expander._create_levels(data_raw)
@@ -251,9 +236,7 @@ def test_create_col_names(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
                             cols_to_drop=['fruits'],
                             dummy_na=True)
-    expander._is_numeric = {'pid': 0, 'djinn_type': 0, 'animal': 0}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
+    expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     expander.levels_ = expander._create_levels(data_raw)
@@ -270,9 +253,7 @@ def test_create_col_names_no_dummy(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
                             cols_to_drop=['fruits'],
                             dummy_na=False)
-    expander._is_numeric = {'pid': 0, 'djinn_type': 0, 'animal': 0}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
+    expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     expander.levels_ = expander._create_levels(data_raw)
@@ -289,9 +270,7 @@ def test_create_col_names_numeric(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'fruits'],
                             cols_to_drop=['djinn_type', 'animal'],
                             dummy_na=True)
-    expander._is_numeric = {'pid': 0, 'djinn_type': 0, 'fruits': 0}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
+    expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     expander.levels_ = expander._create_levels(data_raw)
@@ -300,27 +279,6 @@ def test_create_col_names_numeric(data_raw):
                     'fruits_3.0', 'fruits_NaN', 'age']
     assert cnames == cols_numeric
     assert unexpanded == ['pid', 'fruits', 'age']
-
-
-def test_add_sentinel(data_raw):
-    expander = DataFrameETL()
-    expander._is_numeric = {'pid': 0, 'djinn_type': 0, 'animal': 0,
-                            'fruits': 1, 'age': 1}
-    expander._nan_numeric = NAN_NUMERIC
-    expander._nan_string = NAN_STRING
-    # this shouldn't add any sentinels
-    col = expander._add_sentinel('age', data_raw['age'])
-    pd.testing.assert_series_equal(col, data_raw['age'].astype('uint16'))
-    # this should add a sentinel
-    col2 = expander._add_sentinel('animal', data_raw['animal'])
-    pd.testing.assert_series_equal(col2,
-                                   pd.Series(['cat', 'dog', NAN_STRING],
-                                             dtype='object', name='animal'))
-    # this should add a numeric sentinel
-    col2 = expander._add_sentinel('fruits', data_raw['fruits'])
-    pd.testing.assert_series_equal(col2,
-                                   pd.Series([1.0, NAN_NUMERIC, 3.0],
-                                             dtype='float', name='fruits'))
 
 
 def test_expand_col(data_raw):
@@ -664,11 +622,11 @@ def test_refit(data_raw, data_raw_2):
     assert df2.equals(df_expected_2)
 
 
-def test_pickle(data_raw, dataframe_expected):
+def test_pickle(data_raw):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
                             dummy_na=True)
-    expander.fit(data_raw)
+    expected_array = expander.fit_transform(data_raw)
     # pickle the transformer
     buff = io.BytesIO()
     pickle.dump(expander, buff)
@@ -677,6 +635,37 @@ def test_pickle(data_raw, dataframe_expected):
     expander = pickle.load(buff)
 
     arr = expander.transform(data_raw)
-    expected_array = np.asarray(dataframe_expected)
     assert arr.shape == expected_array.shape
     assert_almost_equal(arr, expected_array)
+
+
+def test_categorical_looks_like_int():
+    # Verify that the right thing happens if the fit DataFrame has a
+    # categorical with integer categories
+    raw = pd.concat([
+            pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
+            pd.Series([500, 1000, 1000], dtype='category', name='intcat'),
+        ], axis=1)
+    expander = DataFrameETL(cols_to_expand='auto', dummy_na=True)
+    tfm = expander.fit_transform(raw)
+    exp = np.array([[1, 1, 0, 0],
+                    [np.nan, 0, 1, 0],
+                    [3, 0, 1, 0]])
+    assert_almost_equal(tfm, exp)
+    assert expander.columns_ == \
+        ['fruits', 'intcat_500', 'intcat_1000', 'intcat_NaN']
+
+
+def test_categorical_mixed_type_levels():
+    # Use a category with both strings and integers in its categories
+    raw = pd.concat([
+            pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
+            pd.Series([500, np.NaN, 'cat'], dtype='category', name='mixed'),
+        ], axis=1)
+    expander = DataFrameETL(cols_to_expand='auto', dummy_na=False)
+    tfm = expander.fit_transform(raw)
+    exp = np.array([[1, 1, 0],
+                    [np.nan, 0, 0],
+                    [3, 0, 1]])
+    assert_almost_equal(tfm, exp)
+    assert expander.columns_ == ['fruits', 'mixed_500', 'mixed_cat']
