@@ -731,7 +731,7 @@ def test_fit_regression():
 
 def test_cv_shuffle_indices():
     """Make sure xmeta and ymeta retain the correct order, even when the CV
-    generator is shuffling.
+    generator is shuffling. This is checking for the bug reported in issue #16.
     """
     estlist = [('be1', PassThruReg()),
                ('be2', PassThruReg()),
@@ -739,6 +739,16 @@ def test_cv_shuffle_indices():
     sr = StackedRegressor(estlist, cv=KFold(n_splits=2, shuffle=True))
     x = np.arange(6)
     y = np.arange(6)
+
+    # Suppose the train indices of a 2-fold CV are:
+    #  [a, b, c]  and  [d, e, f]
+    # Then the test indices are:
+    #  [d, e, f]  and  [a, b, c]
+    # Since xmeta is just a pass-through of x[train] (horizontally stacked
+    # twice, due to the two base estimators) and ymeta is a pass-through of
+    # y[test], and since x = y, we should expect that:
+    #  xmeta[inds, 0] == ymeta
+    #
     inds = np.array([3, 4, 5, 0, 1, 2])
 
     xmeta, ymeta, _ = sr._base_est_fit_predict(x, y)
