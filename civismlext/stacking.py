@@ -233,20 +233,25 @@ class BaseStackedModel(BaseEstimator):
         out-of-sample predictions on the test folds as features for the
         meta-estimator. Also return the fit_params for the meta-estimator.
         """
-        # TO DO:
-        # -use joblib to split base estimator training up
-
         y = y.squeeze()
         # Construct CV iterator
         cv = self._check_cv(y=y)
+        # Extract CV indices since we need them twice, and un-seeded CV
+        # generators with `shuffle=True` split differently each time.
+        train_inds = []
+        test_inds = []
+        for train, test in cv.split(X, y):
+            train_inds.append(train)
+            test_inds.append(test)
 
         fit_params_ests = self._extract_fit_params(**fit_params)
         _fit_predict = self._get_fit_predict_function()
 
+        _jobs = []
+
         # Loop over CV folds to get out-of-sample predictions, which become the
         # features for the meta-estimator.
-        _jobs = []
-        for train, test in cv.split(X, y):
+        for train, test in zip(train_inds, test_inds):
             for name, est in self.estimator_list[:-1]:
                 # adapted from sklearn.model_selection._fit_and_predict
                 # Adjust length of sample weights
@@ -269,7 +274,7 @@ class BaseStackedModel(BaseEstimator):
 
         # Extract the results from joblib
         Xmeta, ymeta = None, None
-        for train, test in cv.split(X, y):
+        for test in test_inds:
             ybase = np.empty((y[test].shape[0], 0))
             for name, est in self.estimator_list[:-1]:
                 # Build design matrix out of out-of-sample predictions

@@ -8,7 +8,7 @@ from ..nonnegative import NonNegativeLinearRegression
 import pytest
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, train_test_split
 from sklearn.metrics import roc_curve, auc, mean_squared_error
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -727,6 +727,22 @@ def test_fit_regression():
     assert sr.estimator_list[0][1].fit_params == {'foo': 'f'}
     assert sr.estimator_list[1][1].fit_params == {}
     assert sr.meta_estimator.fit_params == {'bar': 'b'}
+
+
+def test_cv_shuffle_indices():
+    """Make sure xmeta and ymeta retain the correct order, even when the CV
+    generator is shuffling.
+    """
+    estlist = [('be1', PassThruReg()),
+               ('be2', PassThruReg()),
+               ('meta', PassThruReg())]
+    sr = StackedRegressor(estlist, cv=KFold(n_splits=2, shuffle=True))
+    x = np.arange(6)
+    y = np.arange(6)
+    inds = np.array([3, 4, 5, 0, 1, 2])
+
+    xmeta, ymeta, _ = sr._base_est_fit_predict(x, y)
+    np.testing.assert_equal(xmeta[inds, 0], ymeta)
 
 
 @mock.patch('civismlext.stacking.clone', lambda x: x)
