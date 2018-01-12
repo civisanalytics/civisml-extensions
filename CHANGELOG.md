@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ### Fixed
+- Now caching CV indices. When CV generators are passed with `shuffle=True` and
+  no `random_state` is set, they produce different CV folds on each call to
+  `split` (#22).
+
+## [0.1.6] - 2017-01-12
+
+### Fixed
 - Updated `scipy` dependency in `requirements.txt` file to `scipy>=0.14,<2.0`
 - ``DataFrameETL`` now correctly handles all ``Categorial``-type columns
   in input ``DataFrame``s. The fix also improves execution time of
