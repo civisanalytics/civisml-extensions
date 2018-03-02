@@ -1,6 +1,7 @@
 from __future__ import print_function
 from __future__ import division
 
+import logging
 import uuid
 import warnings
 from itertools import chain
@@ -9,6 +10,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
+
+log = logging.getLogger(__name__)
 
 
 class DataFrameETL(BaseEstimator, TransformerMixin):
@@ -115,6 +118,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             # need to keep track of missing values internally for fill_value
             if self.dummy_na or any(X[col].isnull()):
                 levels[col].extend([self._nan_sentinel])
+        log.debug("Categories (including nulls) for each column: %s",
+                  "; ".join('"%s": %d' % (c, len(l))
+                            for c, l in levels.items()))
         if warn_list:
             warnings.warn("The following categorical column(s) have a large "
                           "number of categories. Are you sure you wish to "
@@ -235,6 +241,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             else:
                 self._cols_to_expand = [c for c in self.cols_to_expand if
                                         c in X.columns]
+            log.debug("There are %d column(s) to expand.",
+                      len(self._cols_to_expand))
             # Update sentinels if the defaults are in the dataframe
             self._check_sentinels(X)
             self.levels_ = self._create_levels(X)
@@ -266,6 +274,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             raise NotFittedError('This DataFrameETL instance is '
                                  'not fitted yet',)
 
+        log.debug("The input data for transformation have shape %s. "
+                  "They will be expanded to shape (%d, %d).",
+                  str(X.shape), X.shape[0], len(self.columns_))
         if self.dataframe_output:
             # preallocate a dataframe
             X_new = pd.DataFrame(index=np.arange(X.shape[0]),
