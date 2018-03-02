@@ -232,6 +232,16 @@ def test_create_levels_no_dummy(data_raw, levels_dict_numeric):
     assert actual_levels == levels_dict_numeric
 
 
+def test_warn_too_many_categories():
+    df = pd.DataFrame({'cat': list(range(2000)),
+                       'bird': 2 * list(range(1000))})
+    with pytest.warns(RuntimeWarning) as warn:
+        DataFrameETL(cols_to_expand=['cat', 'bird']).fit(df)
+    assert len(warn) == 1, "Should only raise one warning"
+    assert '"cat": 2000 categories' in warn[0].message.args[0]
+    assert '"bird": 1000 categories' in warn[0].message.args[0]
+
+
 def test_create_col_names(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
                             cols_to_drop=['fruits'],

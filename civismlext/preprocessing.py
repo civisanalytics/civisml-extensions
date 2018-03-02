@@ -56,6 +56,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
     columns_, list[str]
         List of final column names in order
     """
+    expansion_warn_threshold = 500  # Warn when expanding this many categories
+
     def __init__(self,
                  cols_to_drop=None,
                  cols_to_expand='auto',
@@ -101,11 +103,15 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
     def _create_levels(self, X):
         """Create levels for each column in cols_to_expand."""
         levels = {}
+        warn_list = {}
         # get a list of categories when the column is cast to
         # dtype category
         # levels are sorted by default
         for col in self._cols_to_expand:
             levels[col] = X[col].astype('category').cat.categories.tolist()
+            if (self.expansion_warn_threshold and
+                    len(levels[col]) >= self.expansion_warn_threshold):
+                warn_list[col] = len(levels[col])
             # if there are nans, we will be replacing them with a sentinel,
             # so add the sentinel as a level explicitly
             # Note that even if we don't include a dummy_na column, we still
@@ -115,6 +121,13 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         log.debug("Categories (including nulls) for each column: %s",
                   "; ".join('"%s": %d' % (c, len(l))
                             for c, l in levels.items()))
+        if warn_list:
+            warnings.warn("The following categorical column(s) have a large "
+                          "number of categories. Are you sure you wish to "
+                          "convert them to binary indicators?\n%s" %
+                          ("; ".join(['"%s": %d categories' % (c, l)
+                                      for c, l in warn_list.items()])),
+                          RuntimeWarning)
         return levels
 
     def _create_col_names(self, X):
