@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Added
+- Emit a warning if the user attempts to expand a column with
+  too many categories (#25, #26)
+
 ## [0.1.6] - 2018-1-12
 
 ### Fixed
