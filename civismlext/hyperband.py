@@ -5,6 +5,7 @@ from collections import defaultdict
 from functools import partial
 import copy
 import itertools
+import logging
 
 import numpy as np
 from scipy.stats import rankdata
@@ -22,6 +23,8 @@ from sklearn.utils.fixes import MaskedArray
 from sklearn.utils.validation import indexable
 from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
+
+log = logging.getLogger(__name__)
 
 
 def hyperband_num_per_run(eta, R, Rmin):
@@ -285,8 +288,10 @@ class HyperbandSearchCV(BaseSearchCV):
         else:
             Rmin = list(self.cost_parameter_min.values())[0]
 
+        n_candidates = hyperband_num_per_run(self.eta, R, Rmin)
+        log.debug("Fitting %d folds for each of %d candidates, totalling "
+                  "%d fits.", n_splits, n_candidates, n_candidates * n_splits)
         if self.verbose > 0:
-            n_candidates = hyperband_num_per_run(self.eta, R, Rmin)
             print("Fitting {0} folds for each of {1} candidates, totalling"
                   " {2} fits".format(n_splits, n_candidates,
                                      n_candidates * n_splits))
