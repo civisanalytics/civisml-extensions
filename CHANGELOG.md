@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 - Added debug log emits for the ``DataFrameETL`` transformer (#24, #27)
+- Added debug log emits for the ``HyperbandSearchCV`` estimator (#28, #29)
 - Emit a warning if the user attempts to expand a column with
   too many categories (#25, #26)
 
