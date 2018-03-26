@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.1.7] - 2018-03-27
 ### Added
 - Added debug log emits for the ``DataFrameETL`` transformer (#24, #27)
 - Added debug log emits for the ``HyperbandSearchCV`` estimator (#28, #29)
