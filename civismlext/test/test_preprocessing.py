@@ -632,6 +632,17 @@ def test_refit(data_raw, data_raw_2):
     assert df2.equals(df_expected_2)
 
 
+def test_dataframe_output_with_index():
+    # DataFrame output should preserve the index of the input
+    df = pd.DataFrame({'a': [1, 2, 3], 'b': ['x', 'y', 'x']}, index=[11, 8, 0])
+    df2 = DataFrameETL(dataframe_output=True, dummy_na=False).fit_transform(df)
+
+    df_exp = pd.DataFrame({'a': [1, 2, 3], 'b_x': [1, 0, 1], 'b_y': [0, 1, 0]},
+                          index=[11, 8, 0], dtype='float32')
+
+    assert df2.equals(df_exp)
+
+
 def test_pickle(data_raw):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
