@@ -279,8 +279,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                   str(X.shape), X.shape[0], len(self.columns_))
         if self.dataframe_output:
             # preallocate a dataframe
-            X_new = pd.DataFrame(index=np.arange(X.shape[0]),
-                                 columns=self.columns_)
+            X_new = pd.DataFrame(index=X.index, columns=self.columns_)
             # column index
             i = 0
             for col in self.required_columns_:
