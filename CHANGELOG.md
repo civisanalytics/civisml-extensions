@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed ``DataFrameETL`` transformations of ``DataFrame``s with non-trivial
   index when preserving ``DataFrame`` output type (#32, #33)
 - Add ``pandas`` version restrictions by Python version (#37)
+- Fix code which was incompatible with older ``pandas`` version (#37)
 
 ## [0.1.7] - 2018-03-27
 ### Added
