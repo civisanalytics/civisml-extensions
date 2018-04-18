@@ -94,7 +94,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
     def _check_sentinels(self, X):
         """Replace default sentinel with random values if the default appears
         in the data."""
-        vals = chain.from_iterable(pd.unique(X[col]).tolist() for
+        vals = chain.from_iterable(pd.unique(X[col]) for
                                    col in self._cols_to_expand)
 
         while any(u == self._nan_sentinel for u in vals):
