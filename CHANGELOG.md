@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+
+
+## [0.1.8] - 2018-04-19
 ### Fixed
 - Fixed ``DataFrameETL`` transformations of ``DataFrame``s with non-trivial
   index when preserving ``DataFrame`` output type (#32, #33)
