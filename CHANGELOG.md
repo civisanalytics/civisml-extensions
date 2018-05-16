@@ -5,7 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
-
+### Fixed
+- In ``DataFrameETL``, don't check for levels to expand in columns which
+  are slated to be dropped. This will avoid raising a warning for too
+  many levels in a column if the user has intentionally excluded
+  that column (#39).
 
 ## [0.1.8] - 2018-04-19
 ### Fixed
