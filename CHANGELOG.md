@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+
+
+## [0.1.9] - 2018-05-17
 ### Fixed
 - In ``DataFrameETL``, don't check for levels to expand in columns which
   are slated to be dropped. This will avoid raising a warning for too
