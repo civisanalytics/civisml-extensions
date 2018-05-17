@@ -291,6 +291,17 @@ def test_create_col_names_numeric(data_raw):
     assert unexpanded == ['pid', 'fruits', 'age']
 
 
+def test_dropped_cols_no_levels(data_raw):
+    # If the user requests that we drop a column, we shouldn't create
+    # levels for it. That risks raising a warning for too many levels
+    # when it doesn't matter.
+    expander = DataFrameETL(cols_to_drop=['pid'])
+    expander.fit(data_raw)
+
+    assert 'animal' in expander.levels_
+    assert 'pid' not in expander.levels_
+
+
 def test_expand_col(data_raw):
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             dummy_na=True,

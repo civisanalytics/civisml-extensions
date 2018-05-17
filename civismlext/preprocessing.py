@@ -241,6 +241,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             else:
                 self._cols_to_expand = [c for c in self.cols_to_expand if
                                         c in X.columns]
+            self._cols_to_expand = [c for c in self._cols_to_expand if
+                                    c not in self._cols_to_drop]
             log.debug("There are %d column(s) to expand.",
                       len(self._cols_to_expand))
             # Update sentinels if the defaults are in the dataframe
