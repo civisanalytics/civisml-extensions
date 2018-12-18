@@ -5,7 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
-
+### Added
+- Emit a warning if the column levels during transform don't overlap
+  at all with levels from fitting (#41)
 
 ## [0.1.9] - 2018-05-17
 ### Fixed

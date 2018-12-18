@@ -703,7 +703,7 @@ def test_categorical_mixed_type_levels():
     assert expander.columns_ == ['fruits', 'mixed_500', 'mixed_cat']
 
 
-def test_transform_different_dtype():
+def test_transform_no_level_overlap():
     df = pd.concat([
         pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
         pd.Series(["2000", "2500", "3000"], dtype='object', name='age')
@@ -712,22 +712,14 @@ def test_transform_different_dtype():
     expander = DataFrameETL(cols_to_expand=['age'], dummy_na=False)
     expander.fit(df)
 
-    print(df)
-    # DataFrame should enforce dtype after fitting
-    df['age'] = df['age'].astype('float').astype('object')
-    print(df)
+    # the dtype mismatch will cause incorrect categorical expansion;
+    # DataFrameETL should issue a warning
+    df['age'] = df['age'].astype('int')
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
-        out_arr = expander.transform(df)
-        # assert len(w) == 1
-
-    expected_arr = np.array([[1., 1., 0., 0.],
-                             [np.NaN, 0., 1., 0.],
-                             [3., 0., 0., 1.]])
-
-    print(out_arr)
-    assert_almost_equal(out_arr, expected_arr)
-    assert expander.columns_ == ['fruits', 'age_2000', 'age_2500', 'age_3000']
-    
-
+        expander.transform(df)
+        assert len(w) == 1
+        msg = "No overlap between levels in column 'age' and " + \
+              "levels seen during fit"
+        assert msg in w[0].message.args[0]
