@@ -182,7 +182,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             warn_msg = "No overlap between levels in column " + \
                        "'%s' and levels seen during fit" % (col)
             warnings.warn(warn_msg, UserWarning)
-        
+
         if self._nan_sentinel not in catcol.cat.categories:
             catcol = catcol.cat.add_categories(self._nan_sentinel)
             sentinel_entries = None
