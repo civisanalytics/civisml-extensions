@@ -174,6 +174,15 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         # then it's a category not seen during the fit and should
         # be ignored in the expansion.
         catcol = X[col].astype('category')
+
+        # check for overlap between categories in col and original fit levels
+        overlap = len([lvl for lvl in catcol.cat.categories if
+                       lvl in self.levels_[col]])
+        if overlap == 0:
+            warn_msg = "No overlap between levels in column " + \
+                       "'%s' and levels seen during fit" % (col)
+            warnings.warn(warn_msg, UserWarning)
+
         if self._nan_sentinel not in catcol.cat.categories:
             catcol = catcol.cat.add_categories(self._nan_sentinel)
             sentinel_entries = None
