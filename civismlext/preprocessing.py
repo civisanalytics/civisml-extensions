@@ -57,6 +57,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         List of final column names in order
     """
     expansion_warn_threshold = 500  # Warn when expanding this many categories
+    expansion_exc_threshold = 5000 # Error when expanding this many categories
 
     def __init__(self,
                  cols_to_drop=None,
@@ -104,6 +105,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         """Create levels for each column in cols_to_expand."""
         levels = {}
         warn_list = {}
+        error_list = {}
         # get a list of categories when the column is cast to
         # dtype category
         # levels are sorted by default
@@ -112,6 +114,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             if (self.expansion_warn_threshold and
                     len(levels[col]) >= self.expansion_warn_threshold):
                 warn_list[col] = len(levels[col])
+            if (self.expansion_error_threshold and
+                    len(levels[col]) >= self.expansion_error_threshold):
+                error_list[col] = len(levels[col])
             # if there are nans, we will be replacing them with a sentinel,
             # so add the sentinel as a level explicitly
             # Note that even if we don't include a dummy_na column, we still

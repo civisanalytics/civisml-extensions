@@ -242,6 +242,14 @@ def test_warn_too_many_categories():
     assert '"bird": 1000 categories' in warn[0].message.args[0]
 
 
+def test_exc_way_too_many_categories():
+    df = pd.DataFrame({'cat': list(range(5500)),
+                       'bird': list(range(5500))})
+    with pytest.raises(RuntimeError) as exc:
+        DataFrameETL(cols_to_expand=['cat', 'bird']).fit(df)
+    assert '"cat": 5500 categories' in exc.value
+    assert '"bird": 5500 categories' in exc.value
+
 def test_create_col_names(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
                             cols_to_drop=['fruits'],
