@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 ### Added
+- Raise a RuntimeError if there are more than 5000 levels in a column (#42)
 - Emit a warning if the column levels during transform don't overlap
   at all with levels from fitting (#41)
 

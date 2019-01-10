@@ -57,7 +57,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         List of final column names in order
     """
     expansion_warn_threshold = 500  # Warn when expanding this many categories
-    expansion_exc_threshold = 5000 # Error when expanding this many categories
+    expansion_exc_threshold = 5000  # Error when expanding this many categories
 
     def __init__(self,
                  cols_to_drop=None,
@@ -114,8 +114,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             if (self.expansion_warn_threshold and
                     len(levels[col]) >= self.expansion_warn_threshold):
                 warn_list[col] = len(levels[col])
-            if (self.expansion_error_threshold and
-                    len(levels[col]) >= self.expansion_error_threshold):
+            if (self.expansion_exc_threshold and
+                    len(levels[col]) >= self.expansion_exc_threshold):
                 error_list[col] = len(levels[col])
             # if there are nans, we will be replacing them with a sentinel,
             # so add the sentinel as a level explicitly
@@ -133,6 +133,16 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                           ("; ".join(['"%s": %d categories' % (c, l)
                                       for c, l in warn_list.items()])),
                           RuntimeWarning)
+        if error_list:
+            err = ("The following column(s) have a very large number of "
+                   "categories and may use up too much memory if expanded. "
+                   "If you are sure you want to expand these features, "
+                   "manually update the expansion_exc_threshold attribute "
+                   "and rerun. Otherwise, exclude these columns from "
+                   "categorical expansion.\n%s" %
+                   ("; ".join(['"%s": %d categories' % (c, l)
+                               for c, l in error_list.items()])))
+            raise RuntimeError(err)
         return levels
 
     def _create_col_names(self, X):

@@ -247,8 +247,9 @@ def test_exc_way_too_many_categories():
                        'bird': list(range(5500))})
     with pytest.raises(RuntimeError) as exc:
         DataFrameETL(cols_to_expand=['cat', 'bird']).fit(df)
-    assert '"cat": 5500 categories' in exc.value
-    assert '"bird": 5500 categories' in exc.value
+    assert '"cat": 5500 categories' in str(exc.value)
+    assert '"bird": 5500 categories' in str(exc.value)
+
 
 def test_create_col_names(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
