@@ -216,6 +216,7 @@ def test_create_levels(data_raw, levels_dict):
     expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
+    expander._dummy_na = 'expanded'
     actual_levels = expander._create_levels(data_raw)
     assert actual_levels == levels_dict
 
@@ -228,6 +229,7 @@ def test_create_levels_no_dummy(data_raw, levels_dict_numeric):
     expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
+    expander._dummy_na = False
     actual_levels = expander._create_levels(data_raw)
     assert actual_levels == levels_dict_numeric
 
@@ -254,11 +256,13 @@ def test_exc_way_too_many_categories():
 def test_create_col_names(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'djinn_type', 'animal'],
                             cols_to_drop=['fruits'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
+    expander._dummy_na = 'expanded'
     expander.levels_ = expander._create_levels(data_raw)
+    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
                      'djinn_type_effrit', 'djinn_type_marid',
@@ -275,7 +279,9 @@ def test_create_col_names_no_dummy(data_raw):
     expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
+    expander._dummy_na = False
     expander.levels_ = expander._create_levels(data_raw)
+    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_expected = ['pid_a', 'pid_b', 'pid_c',
                      'djinn_type_effrit', 'djinn_type_marid',
@@ -288,11 +294,13 @@ def test_create_col_names_no_dummy(data_raw):
 def test_create_col_names_numeric(data_raw):
     expander = DataFrameETL(cols_to_expand=['pid', 'fruits'],
                             cols_to_drop=['djinn_type', 'animal'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander._nan_sentinel = NAN_STRING
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
+    expander._dummy_na = 'expanded'
     expander.levels_ = expander._create_levels(data_raw)
+    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_numeric = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN', 'fruits_1.0',
                     'fruits_3.0', 'fruits_NaN', 'age']
@@ -313,7 +321,7 @@ def test_dropped_cols_no_levels(data_raw):
 
 def test_expand_col(data_raw):
     expander = DataFrameETL(cols_to_drop=['fruits'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             fill_value=-1.0)
     expander.fit(data_raw)
     # should expand even if there are no NaNs
@@ -328,7 +336,7 @@ def test_expand_col(data_raw):
 
 def test_expand_col_no_dummy(data_raw):
     expander = DataFrameETL(cols_to_drop=['fruits'],
-                            dummy_na=False,
+                            dummy_na=None,
                             fill_value=-1.0)
     expander.fit(data_raw)
     arr = expander._expand_col(data_raw, 'pid')
@@ -342,7 +350,7 @@ def test_expand_col_no_dummy(data_raw):
 def test_expand_col_numeric(data_raw):
     expander = DataFrameETL(cols_to_drop=['pid', 'djinn_type', 'animal'],
                             cols_to_expand=['fruits'],
-                            dummy_na=True,
+                            dummy_na='all',
                             fill_value=0.0)
     expander.fit(data_raw)
     arr = expander._expand_col(data_raw, 'fruits')
@@ -363,7 +371,7 @@ def test_expand_col_numeric_no_dummy(data_raw):
 
 def test_expand_col_few_levels(data_few_levels, few_levels_expected):
     expander = DataFrameETL(cols_to_expand=['pid', 'fruits', 'animal'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             fill_value=99.)
     expander.fit(data_few_levels)
     arr = expander._expand_col(data_few_levels, 'pid')
@@ -407,26 +415,30 @@ def test_fit_exc(dataframe_expected):
         expander.fit(arr)
 
 
-def test_fit_auto(data_raw, levels_dict):
+def test_fit_auto(data_raw):
     # test auto identification of columns to expand
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand='auto',
-                            dummy_na=True)
+                            dummy_na='all')
     expander.fit(data_raw)
-    cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
+    cols_expected = ['pid_a', 'pid_b', 'pid_c',
                      'djinn_type_effrit', 'djinn_type_marid',
-                     'djinn_type_sila', 'djinn_type_NaN', 'age',
+                     'djinn_type_sila', 'age',
                      'animal_cat', 'animal_dog', 'animal_NaN']
-    assert expander.levels_ == levels_dict
+    levels_expected = {'pid': ['a', 'b', 'c'],
+                       'djinn_type': ['effrit', 'marid', 'sila'],
+                       'animal': ['cat', 'dog', 'NaN_Sentinel']}
+    assert expander.levels_ == levels_expected
     assert expander.columns_ == cols_expected
     assert expander.required_columns_ == ['pid', 'djinn_type',
                                           'age', 'animal']
 
 
 def test_fit_none(data_raw):
-    # No dropping, no expansion
+    # No dropping, no expansion, no dummying
     expander = DataFrameETL(cols_to_drop=None,
-                            cols_to_expand=None)
+                            cols_to_expand=None,
+                            dummy_na=None)
     expander.fit(data_raw)
     # column names should be identical to dataframe names
     data_cnames = data_raw.columns.tolist()
@@ -435,9 +447,10 @@ def test_fit_none(data_raw):
 
 
 def test_fit_drop_only(data_raw):
-    # test dropping columns but not expanding them
+    # test dropping columns but not expanding or dummying them
     expander = DataFrameETL(cols_to_drop=['fruits'],
-                            cols_to_expand=None)
+                            cols_to_expand=None,
+                            dummy_na=None)
     expander.fit(data_raw)
     # both lists will be the same, since no cols were expanded
     assert expander.columns_ == ['pid', 'djinn_type', 'age', 'animal']
@@ -449,7 +462,7 @@ def test_fit_list(data_raw, levels_dict):
     # test that fit handles list of cols to expand correctly
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand=['pid', 'djinn_type', 'animal'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander.fit(data_raw)
     cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
                      'djinn_type_effrit', 'djinn_type_marid',
@@ -464,7 +477,7 @@ def test_fit_list(data_raw, levels_dict):
 def test_fit_list_numeric(data_raw, levels_dict_numeric):
     expander = DataFrameETL(cols_to_drop=['djinn_type', 'animal'],
                             cols_to_expand=['pid', 'fruits'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander.fit(data_raw)
     assert expander.levels_ == levels_dict_numeric
     cols_numeric = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN', 'fruits_1.0',
@@ -478,7 +491,7 @@ def test_fit_with_nan_col(data_raw, levels_dict):
     data_raw['nantastic'] = pd.Series([np.NaN] * 3)
     expander = DataFrameETL(cols_to_drop=['fruits'],
                             cols_to_expand=['pid', 'djinn_type', 'animal'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             check_null_cols='warn')
     with warnings.catch_warnings(record=True) as fit_w:
         expander.fit(data_raw)
@@ -508,7 +521,7 @@ def test_transform_notfitted(data_raw):
 def test_transform(data_raw, dataframe_expected):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander.fit(data_raw)
     arr = expander.transform(data_raw)
 
@@ -536,7 +549,7 @@ def test_transform_no_dummy(data_raw, dataframe_expected):
 def test_transform_dataframe(data_raw, dataframe_expected):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             dataframe_output=True)
     expander.fit(data_raw)
     df = expander.transform(data_raw)
@@ -562,7 +575,7 @@ def test_transform_dataframe_no_dummy(data_raw, dataframe_expected):
 
 def test_transform_two_levels(data_few_levels, few_levels_expected):
     expander = DataFrameETL(cols_to_expand=['pid', 'fruits', 'animal'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             fill_value=99.,
                             dataframe_output=True)
     expander.fit(data_few_levels)
@@ -600,7 +613,7 @@ def test_transform_preserve_col_order(data_raw, data_raw_2,
                                       dataframe_2_expected):
     expander = DataFrameETL(cols_to_expand=['pid', 'fruits'],
                             cols_to_drop=['djinn_type', 'age', 'animal'],
-                            dummy_na=True,
+                            dummy_na='expanded',
                             dataframe_output=True)
     expander.fit(data_raw)
     # swap col order for second data file
@@ -613,7 +626,7 @@ def test_transform_bad_expand_col(data_raw, dataframe_expected):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits',
                                             'animal', 'not_in_df'],
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander.fit(data_raw)
     arr = expander.transform(data_raw)
 
@@ -626,7 +639,7 @@ def test_refit(data_raw, data_raw_2):
     expander = DataFrameETL(cols_to_drop=['pid', 'age', 'djinn_type'],
                             cols_to_expand=['fruits', 'animal'],
                             dataframe_output=True,
-                            dummy_na=True)
+                            dummy_na='expanded')
     expander.fit(data_raw)
     df = expander.transform(data_raw)
     df_expected = pd.concat([
@@ -666,7 +679,7 @@ def test_dataframe_output_with_index():
 def test_pickle(data_raw):
     expander = DataFrameETL(cols_to_drop=['pid'],
                             cols_to_expand=['djinn_type', 'fruits', 'animal'],
-                            dummy_na=True)
+                            dummy_na='all')
     expected_array = expander.fit_transform(data_raw)
     # pickle the transformer
     buff = io.BytesIO()
@@ -687,7 +700,7 @@ def test_categorical_looks_like_int():
             pd.Series([1.0, np.NaN, 3.0], dtype='float', name='fruits'),
             pd.Series([500, 1000, 1000], dtype='category', name='intcat'),
         ], axis=1)
-    expander = DataFrameETL(cols_to_expand='auto', dummy_na=True)
+    expander = DataFrameETL(cols_to_expand='auto', dummy_na='expanded')
     tfm = expander.fit_transform(raw)
     exp = np.array([[1, 1, 0, 0],
                     [np.nan, 0, 1, 0],
@@ -732,3 +745,46 @@ def test_transform_no_level_overlap():
         msg = "No overlap between levels in column 'age' and " + \
               "levels seen during fit"
         assert msg in w[0].message.args[0]
+
+
+def test_expand_all_na(data_raw):
+    # output df should only have nan columns for columns which
+    # actually had nans during fit
+    df_expected = pd.concat([
+        pd.Series([0., 1., 0.], dtype='float32', name='djinn_type_effrit'),
+        pd.Series([1., 0., 0.], dtype='float32', name='djinn_type_marid'),
+        pd.Series([0., 0., 1.], dtype='float32', name='djinn_type_sila'),
+        pd.Series([1., np.nan, 3.], dtype='float32', name='fruits'),
+        pd.Series([0., 1., 0.], dtype='float32', name='fruits_NaN'),
+        pd.Series([1., 0., 0.], dtype='float32', name='animal_cat'),
+        pd.Series([0., 1., 0.], dtype='float32', name='animal_dog'),
+        pd.Series([0., 0., 1.], dtype='float32', name='animal_NaN'),
+    ], axis=1)
+    expander = DataFrameETL(cols_to_expand=['djinn_type', 'animal'],
+                            cols_to_drop=['pid', 'age'],
+                            dummy_na='all',
+                            dataframe_output=True)
+    expander.fit(data_raw)
+    assert expander.unexpanded_nans == {'fruits': True}
+
+    df_out = expander.transform(data_raw)
+    assert df_out.equals(df_expected)
+
+
+def test_dummy_na_true_deprecated(data_raw):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+        DataFrameETL(cols_to_drop=['pid'],
+                     cols_to_expand=['djinn_type', 'fruits', 'animal'],
+                     dummy_na=True)
+        assert len(w) == 1
+        assert issubclass(w[-1].category, DeprecationWarning)
+
+
+def test_dummy_na_bad_value(data_raw):
+    with pytest.raises(ValueError):
+        expander = DataFrameETL(cols_to_drop=['pid'],
+                                cols_to_expand=['djinn_type',
+                                                'fruits', 'animal'],
+                                dummy_na="bad_value")
+        expander.fit(data_raw)
