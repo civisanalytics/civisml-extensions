@@ -201,7 +201,7 @@ def test_check_sentinels(data_raw):
     expander._cols_to_drop = expander.cols_to_drop
     expander._cols_to_expand = expander.cols_to_expand
     expander._check_sentinels(data_raw)
-    assert expander._nan_sentinel is not 'effrit'
+    assert expander._nan_sentinel != 'effrit'
     assert not (data_raw[['pid', 'djinn_type', 'animal']] ==
                 expander._nan_sentinel).any().any()
 
