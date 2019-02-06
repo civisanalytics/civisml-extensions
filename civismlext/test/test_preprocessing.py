@@ -4,6 +4,7 @@ from __future__ import division
 import pickle
 import io
 import warnings
+import sys
 
 import numpy as np
 import pandas as pd
@@ -770,7 +771,7 @@ def test_expand_all_na(data_raw):
     df_out = expander.transform(data_raw)
     assert df_out.equals(df_expected)
 
-
+@pytest.mark.skipif(sys.version_info < (3,), reason='requires python 3')
 def test_dummy_na_true_deprecated(data_raw):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
