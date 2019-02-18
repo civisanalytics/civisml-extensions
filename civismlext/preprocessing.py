@@ -188,8 +188,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # it with 'NaN'. If 'NaN' is already a level, use the
                     # sentinel to prevent column name duplicates.
                     # Note that for "expanded", all expanded features will have
-                    # a dummied NaN column, which for "all", features with nulls
-                    # (expanded or not) will have a dummied NaN column.
+                    # a dummied NaN column, which for "all", features with
+                    # nulls (expanded or not) will have a dummied NaN column.
                     if 'NaN' in col_levels:
                         expanded_names = ['%s_%s' % (col, self._nan_sentinel)
                                           if cat == self._nan_sentinel
