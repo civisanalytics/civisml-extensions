@@ -263,7 +263,7 @@ def test_create_col_names(data_raw):
     expander._cols_to_expand = expander.cols_to_expand
     expander._dummy_na = 'expanded'
     expander.levels_ = expander._create_levels(data_raw)
-    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
+    expander._unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_expected = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN',
                      'djinn_type_effrit', 'djinn_type_marid',
@@ -282,7 +282,7 @@ def test_create_col_names_no_dummy(data_raw):
     expander._cols_to_expand = expander.cols_to_expand
     expander._dummy_na = False
     expander.levels_ = expander._create_levels(data_raw)
-    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
+    expander._unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_expected = ['pid_a', 'pid_b', 'pid_c',
                      'djinn_type_effrit', 'djinn_type_marid',
@@ -301,7 +301,7 @@ def test_create_col_names_numeric(data_raw):
     expander._cols_to_expand = expander.cols_to_expand
     expander._dummy_na = 'expanded'
     expander.levels_ = expander._create_levels(data_raw)
-    expander.unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
+    expander._unexpanded_nans = expander._flag_unexpanded_nans(data_raw)
     (cnames, unexpanded) = expander._create_col_names(data_raw)
     cols_numeric = ['pid_a', 'pid_b', 'pid_c', 'pid_NaN', 'fruits_1.0',
                     'fruits_3.0', 'fruits_NaN', 'age']
@@ -766,7 +766,7 @@ def test_expand_all_na(data_raw):
                             dummy_na='all',
                             dataframe_output=True)
     expander.fit(data_raw)
-    assert expander.unexpanded_nans == {'fruits': True}
+    assert expander._unexpanded_nans == {'fruits': True}
 
     df_out = expander.transform(data_raw)
     assert df_out.equals(df_expected)
@@ -784,9 +784,11 @@ def test_dummy_na_true_deprecated(data_raw):
 
 
 def test_dummy_na_bad_value(data_raw):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         expander = DataFrameETL(cols_to_drop=['pid'],
                                 cols_to_expand=['djinn_type',
                                                 'fruits', 'animal'],
                                 dummy_na="bad_value")
         expander.fit(data_raw)
+    assert str(exc.value) == "dummy_na must be one of " + \
+        "[None, False, 'all', 'expanded']"

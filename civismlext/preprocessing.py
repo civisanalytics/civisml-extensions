@@ -36,7 +36,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         - 'all': add indicator columns for all columns with missing values
           in fit data
         - 'expanded': add indicator columns for all categorically expanded
-          columns (matches `True` behavior from version 1)
+          columns (matches `True` behavior from version 0.1)
     fill_value : {float, np.nan}, (default: 0.0)
         The value to fill for missing values with in expanded columns.
         Can be a float or np.nan.
@@ -187,6 +187,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # avoid exposing the sentinel to the user by replacing
                     # it with 'NaN'. If 'NaN' is already a level, use the
                     # sentinel to prevent column name duplicates.
+                    # Note that for "expanded", all expanded features will have
+                    # a dummied NaN column, which for "all", features with nulls
+                    # (expanded or not) will have a dummied NaN column.
                     if 'NaN' in col_levels:
                         expanded_names = ['%s_%s' % (col, self._nan_sentinel)
                                           if cat == self._nan_sentinel
@@ -206,7 +209,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             else:
                 cnames.append(col)
                 # Add columns for nulls in unexpanded columns
-                if self.unexpanded_nans[col]:
+                if self._unexpanded_nans[col]:
                     cnames.append('%s_NaN' % (col))
         return cnames, unexpanded_cnames
 
@@ -313,7 +316,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             self.levels_ = self._create_levels(X)
 
         # optionally flag unexpanded columns with nans
-        self.unexpanded_nans = self._flag_unexpanded_nans(X)
+        self._unexpanded_nans = self._flag_unexpanded_nans(X)
 
         # Get colummn names in order
         self.columns_, self.required_columns_ = self._create_col_names(X)
@@ -365,7 +368,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # put the column in the array
                     X_new.iloc[:, i] = X[col].astype('float32')
                     i += 1
-                    if self.unexpanded_nans[col]:
+                    if self._unexpanded_nans[col]:
                         X_new.iloc[:, i] = X[col].isnull().astype('float32')
                         i += 1
         else:
@@ -385,7 +388,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # put the column in the array
                     X_new[:, i] = X[col].astype('float32')
                     i += 1
-                    if self.unexpanded_nans[col]:
+                    if self._unexpanded_nans[col]:
                         X_new[:, i] = X[col].isnull().astype('float32')
                         i += 1
 
