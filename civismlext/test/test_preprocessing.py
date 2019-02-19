@@ -772,6 +772,36 @@ def test_expand_all_na(data_raw):
     assert df_out.equals(df_expected)
 
 
+def test_na_in_transform_but_not_fit_all():
+    fit_df = pd.concat([
+        pd.Series(['marid', 'effrit', 'sila'], dtype='object',
+                  name='djinn_type'),
+        pd.Series([1.0, 2.0, 3.0], dtype='float', name='fruits'),
+    ], axis=1)
+
+    expander = DataFrameETL(cols_to_expand=['djinn_type'],
+                            dummy_na='all',
+                            dataframe_output=True)
+    expander.fit(fit_df)
+
+    # Add nans in the first row of pid and djinn_type for transforming
+    transform_df = pd.concat([
+        pd.Series([np.nan, 'effrit', 'sila'], dtype='object',
+                  name='djinn_type'),
+        pd.Series([np.nan, 2.0, 3.0], dtype='float', name='fruits'),
+        ], axis=1)
+    df = expander.transform(transform_df)
+
+    df_expected = pd.concat([
+        pd.Series([0., 1., 0.], dtype='float32', name='djinn_type_effrit'),
+        pd.Series([0., 0., 0.], dtype='float32', name='djinn_type_marid'),
+        pd.Series([0., 0., 1.], dtype='float32', name='djinn_type_sila'),
+        pd.Series([np.nan, 2.0, 3.0], dtype='float32', name='fruits'),
+    ], axis=1)
+
+    assert df.equals(df_expected)
+
+
 @pytest.mark.skipif(sys.version_info < (3,), reason='requires python 3')
 def test_dummy_na_true_deprecated(data_raw):
     with warnings.catch_warnings(record=True) as w:
