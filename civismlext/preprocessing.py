@@ -18,6 +18,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
     """Performs ETL on a dataframe, using the following steps:
     - dropping specified columns
     - performing categorical expansion on a specified set of columns
+    - creating dummy columns for missing data in a specified set of columns
     - converting the dataframe to a numpy array or dataframe of float32s.
 
     Parameters
@@ -29,8 +30,13 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         - "auto": All non-numeric columns will be expanded.
         - None: no columns will be expanded.
         - list[str]: list of column names to expand.
-    dummy_na : bool, (default: True)
-        Add a column to indicate missing values.
+    dummy_na : {None, False, 'all', 'expanded'}, (default: 'all')
+        Options for adding indicator columns for missing values:
+        - None or False: do not add indicator columns for missing values
+        - 'all': add indicator columns for all columns with missing values
+          in fit data
+        - 'expanded': add indicator columns for all categorically expanded
+          columns (matches `True` behavior from version 0.1)
     fill_value : {float, np.nan}, (default: 0.0)
         The value to fill for missing values with in expanded columns.
         Can be a float or np.nan.
@@ -62,12 +68,18 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
     def __init__(self,
                  cols_to_drop=None,
                  cols_to_expand='auto',
-                 dummy_na=True,
+                 dummy_na='all',
                  fill_value=0.0,
                  dataframe_output=False,
                  check_null_cols=False):
         self.cols_to_drop = cols_to_drop
         self.cols_to_expand = cols_to_expand
+        if dummy_na is True:
+            warnings.warn(
+                '`True` option for dummy_na is deprecated, use '
+                '"all" or "expanded" instead',
+                DeprecationWarning
+            )
         self.dummy_na = dummy_na
         self.fill_value = fill_value
         self.dataframe_output = dataframe_output
@@ -121,11 +133,12 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             # so add the sentinel as a level explicitly
             # Note that even if we don't include a dummy_na column, we still
             # need to keep track of missing values internally for fill_value
-            if self.dummy_na or any(X[col].isnull()):
+            if self._dummy_na == 'expanded' or any(X[col].isnull()):
                 levels[col].extend([self._nan_sentinel])
         log.debug("Categories (including nulls) for each column: %s",
                   "; ".join('"%s": %d' % (c, len(l))
                             for c, l in levels.items()))
+
         if warn_list:
             warnings.warn("The following categorical column(s) have a large "
                           "number of categories. Are you sure you wish to "
@@ -145,6 +158,19 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             raise RuntimeError(err)
         return levels
 
+    def _flag_unexpanded_nans(self, X):
+        """Optionally create levels for columns we don't want to expand,
+        but have nulls."""
+        unexpanded_nans = {}
+        skip_cols = set(self._cols_to_drop + self._cols_to_expand)
+        for col in X.columns:
+            if col not in skip_cols:
+                if self._dummy_na == 'all' and any(X[col].isnull()):
+                    unexpanded_nans[col] = True
+                else:
+                    unexpanded_nans[col] = False
+        return unexpanded_nans
+
     def _create_col_names(self, X):
         """Identify levels and build an ordered list of final column names."""
         # get unexpanded columns, remove any that need dropping
@@ -157,10 +183,13 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         for col in unexpanded_cnames:
             if col in self._cols_to_expand:
                 col_levels = self.levels_[col]
-                if self.dummy_na:
+                if self._dummy_na in ['expanded', 'all']:
                     # avoid exposing the sentinel to the user by replacing
                     # it with 'NaN'. If 'NaN' is already a level, use the
                     # sentinel to prevent column name duplicates.
+                    # Note that for "expanded", all expanded features will have
+                    # a dummied NaN column, which for "all", features with
+                    # nulls (expanded or not) will have a dummied NaN column.
                     if 'NaN' in col_levels:
                         expanded_names = ['%s_%s' % (col, self._nan_sentinel)
                                           if cat == self._nan_sentinel
@@ -179,7 +208,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                 cnames.extend(expanded_names)
             else:
                 cnames.append(col)
-
+                # Add columns for nulls in unexpanded columns
+                if self._unexpanded_nans[col]:
+                    cnames.append('%s_NaN' % (col))
         return cnames, unexpanded_cnames
 
     def _expand_col(self, X, col):
@@ -216,7 +247,7 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         is_nan = (newcat == self._nan_sentinel)
         if is_nan.any():
             expanded_array[is_nan, :-1] = self.fill_value
-            if not self.dummy_na:
+            if not self._dummy_na:
                 # Drop the last column, which is the nan column
                 expanded_array = expanded_array[:, :-1]
 
@@ -242,6 +273,17 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
         """
         if not isinstance(X, pd.DataFrame):
             raise TypeError("ETL transformer must be fit to a dataframe.")
+
+        # TODO: remove in version 1.0.0
+        if self.dummy_na is True:
+            self._dummy_na = 'expanded'
+        else:
+            self._dummy_na = self.dummy_na
+
+        # check that a valid dummy_na value passed in
+        valid_options = [None, False, 'all', 'expanded']
+        if self._dummy_na not in valid_options:
+            raise ValueError('dummy_na must be one of %s' % valid_options)
 
         # set default values
         #  _nan_sentinel is a temporary sentinel for np.nan values
@@ -272,6 +314,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
             # Update sentinels if the defaults are in the dataframe
             self._check_sentinels(X)
             self.levels_ = self._create_levels(X)
+
+        # optionally flag unexpanded columns with nans
+        self._unexpanded_nans = self._flag_unexpanded_nans(X)
 
         # Get colummn names in order
         self.columns_, self.required_columns_ = self._create_col_names(X)
@@ -323,6 +368,9 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # put the column in the array
                     X_new.iloc[:, i] = X[col].astype('float32')
                     i += 1
+                    if self._unexpanded_nans[col]:
+                        X_new.iloc[:, i] = X[col].isnull().astype('float32')
+                        i += 1
         else:
             # preallocate an array
             ncol = len(self.columns_)
@@ -340,5 +388,8 @@ class DataFrameETL(BaseEstimator, TransformerMixin):
                     # put the column in the array
                     X_new[:, i] = X[col].astype('float32')
                     i += 1
+                    if self._unexpanded_nans[col]:
+                        X_new[:, i] = X[col].isnull().astype('float32')
+                        i += 1
 
         return X_new

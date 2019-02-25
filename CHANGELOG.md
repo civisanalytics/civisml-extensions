@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+### Changed
+- Instead of boolean flag for `dummy_na`, have None/False (no dummying),
+  'expanded' (matches previous True behavior), and 'all' (dummy NAs
+  in all columns where they appear, not just ones we're categorically
+  expanding). (#44)
 
 ## [0.1.10] - 2019-01-16
 ### Added
