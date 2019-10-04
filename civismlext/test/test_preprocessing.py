@@ -22,8 +22,7 @@ from sklearn.utils.estimator_checks import (
     check_get_params_invariance,
     check_dict_unchanged,
     check_dont_overwrite_parameters,
-    check_parameters_default_constructible,
-    check_no_attributes_set_in_init)
+    check_parameters_default_constructible)
 import pytest
 
 from civismlext.preprocessing import DataFrameETL

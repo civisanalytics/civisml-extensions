@@ -275,9 +275,12 @@ def test_smoke_clf_methods(clf_test_data, n_jobs):
     ytrain = clf_test_data['y']
 
     rng = np.random.RandomState(17)
-    est_list = [('lr', LogisticRegression(C=10**6, random_state=rng)),
-                ('rf', RandomForestClassifier(random_state=rng)),
-                ('metalr', LogisticRegression(random_state=rng))]
+    est_list = [('lr', LogisticRegression(C=10**6, random_state=rng,
+                                          solver='lbfgs')),
+                ('rf', RandomForestClassifier(random_state=rng,
+                                              n_estimators=10)),
+                ('metalr', LogisticRegression(random_state=rng,
+                                              solver='lbfgs'))]
     sm = StackedClassifier(est_list, n_jobs=n_jobs)
     sm.fit(xtrain, ytrain)
     sm.predict(xtrain)
@@ -295,8 +298,10 @@ def test_smoke_multiclass_clf_methods(clf_test_data, n_jobs):
     rng = np.random.RandomState(17)
     X, y = make_classification(n_classes=4, n_informative=4, random_state=rng)
     est_list = [('dt', DecisionTreeClassifier(random_state=rng)),
-                ('rf', RandomForestClassifier(random_state=rng)),
-                ('metarf', RandomForestClassifier(random_state=rng))]
+                ('rf', RandomForestClassifier(random_state=rng,
+                                              n_estimators=10)),
+                ('metarf', RandomForestClassifier(random_state=rng,
+                                                  n_estimators=10))]
     sm = StackedClassifier(est_list, n_jobs=n_jobs)
     sm.fit(X, y)
     sm.predict(X)
@@ -315,7 +320,8 @@ def test_smoke_regression_methods(regression_test_data, n_jobs):
 
     rng = np.random.RandomState(17)
     est_list = [('lr', LinearRegression()),
-                ('rf', RandomForestRegressor(random_state=rng)),
+                ('rf', RandomForestRegressor(random_state=rng,
+                                             n_estimators=10)),
                 ('nnls', NonNegativeLinearRegression())]
     sm = StackedRegressor(est_list, n_jobs=n_jobs)
     sm.fit(xtrain, ytrain)
@@ -335,7 +341,8 @@ def test_smoke_multiout_regression_methods(n_jobs):
 
     rng = np.random.RandomState(17)
     est_list = [('lr', LinearRegression()),
-                ('rf', RandomForestRegressor(random_state=rng)),
+                ('rf', RandomForestRegressor(random_state=rng,
+                                             n_estimators=10)),
                 ('metalr', LinearRegression())]
     sm = StackedRegressor(est_list, n_jobs=n_jobs)
     sm.fit(X, y)
@@ -858,8 +865,9 @@ def test_fit_params_regression(regression_test_data):
     ytrain = regression_test_data['y']
     sample_weights = [1./len(ytrain)] * len(ytrain)
     fit_params = {'rf__sample_weight': sample_weights}
-    sr = StackedRegressor([('rf', RandomForestRegressor(random_state=7)),
-                           ('rf2', RandomForestRegressor()),
+    sr = StackedRegressor([('rf', RandomForestRegressor(random_state=7,
+                                                        n_estimators=10)),
+                           ('rf2', RandomForestRegressor(n_estimators=10)),
                            ('meta', NonNegativeLinearRegression())])
     Xmeta, ymeta, _ = sr._base_est_fit_predict(
         xtrain, ytrain, **fit_params)
@@ -871,9 +879,10 @@ def test_fit_params_clf(clf_test_data):
     ytrain = clf_test_data['y']
     sample_weights = [1./len(ytrain)] * len(ytrain)
     fit_params = {'rf__sample_weight': sample_weights}
-    sr = StackedClassifier([('rf', RandomForestClassifier(random_state=7)),
-                           ('lr', LogisticRegression()),
-                           ('meta', LogisticRegression())])
+    sr = StackedClassifier([('rf', RandomForestClassifier(random_state=7,
+                                                          n_estimators=10)),
+                           ('lr', LogisticRegression(solver='lbfgs')),
+                           ('meta', LogisticRegression(solver='lbfgs'))])
     Xmeta, ymeta, _ = sr._base_est_fit_predict(
         xtrain, ytrain, **fit_params)
     assert Xmeta.shape == xtrain.shape
@@ -895,11 +904,12 @@ def test_integration_regression(regression_test_data, n_jobs):
     xtest = regression_test_data['xtest']
     ytest = regression_test_data['ytest']
 
-    sr = StackedRegressor([('rf', RandomForestRegressor(random_state=7)),
+    sr = StackedRegressor([('rf', RandomForestRegressor(random_state=7,
+                                                        n_estimators=10)),
                            ('lr', LinearRegression()),
                            ('metalr', NonNegativeLinearRegression())],
                           n_jobs=n_jobs)
-    rf = RandomForestRegressor(random_state=7)
+    rf = RandomForestRegressor(random_state=7, n_estimators=10)
     lr = LinearRegression()
     sr_mse = fit_predict_measure_reg(sr, xtrain, ytrain, xtest, ytest)
     rf_mse = fit_predict_measure_reg(rf, xtrain, ytrain, xtest, ytest)
@@ -929,14 +939,14 @@ def test_integration_clf(clf_test_data, n_jobs):
     xtest = clf_test_data['xtest']
     ytest = clf_test_data['ytest']
 
-    sc = StackedClassifier([('rf', RandomForestClassifier()),
-                            ('lr', LogisticRegression()),
-                            ('metalr', LogisticRegression())],
+    sc = StackedClassifier([('rf', RandomForestClassifier(n_estimators=10)),
+                            ('lr', LogisticRegression(solver='lbfgs')),
+                            ('metalr', LogisticRegression(solver='lbfgs'))],
                            n_jobs=n_jobs)
     sc.set_params(rf__random_state=7, rf__n_estimators=20,
                   lr__random_state=8, metalr__random_state=9,
                   lr__C=10**7, metalr__C=10**7)
-    lr = LogisticRegression(C=10**7, random_state=8)
+    lr = LogisticRegression(C=10**7, random_state=8, solver='lbfgs')
     rf = RandomForestClassifier(n_estimators=20, random_state=7)
 
     sc_auc = fit_predict_measure_clf(sc, xtrain, ytrain, xtest, ytest)
