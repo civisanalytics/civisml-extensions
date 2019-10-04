@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 ### Changed
+- Update tests and requirements.txt to allow sklearn 0.20 and above. (#47)
 - Instead of boolean flag for `dummy_na`, have None/False (no dummying),
   'expanded' (matches previous True behavior), and 'all' (dummy NAs
   in all columns where they appear, not just ones we're categorically
