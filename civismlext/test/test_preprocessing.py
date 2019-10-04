@@ -133,7 +133,6 @@ def levels_dict_numeric():
 def test_sklearn_api():
     name = DataFrameETL.__name__
     check_parameters_default_constructible(name, DataFrameETL)
-    # check_no_attributes_set_in_init(name, DataFrameETL)
 
     estimator = DataFrameETL()
 
