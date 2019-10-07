@@ -7,8 +7,8 @@ from scipy.stats import expon, randint, rankdata
 import numpy as np
 
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.testing import assert_equal, assert_warns
-from sklearn.utils.testing import assert_false, assert_true, assert_array_equal
+from sklearn.utils.testing import assert_equal
+from sklearn.utils.testing import assert_array_equal
 from sklearn.utils import check_random_state
 from sklearn.datasets import make_classification
 from sklearn.svm import SVC
@@ -142,41 +142,22 @@ def test_smoke_hyperband(min_iter):
 
 def check_cv_results_array_types(cv_results, param_keys, score_keys):
     # Check if the search `cv_results`'s array are of correct types
-    assert_true(all(isinstance(cv_results[param], np.ma.MaskedArray)
-                    for param in param_keys))
-    assert_true(all(cv_results[key].dtype == object for key in param_keys))
-    assert_false(any(isinstance(cv_results[key], np.ma.MaskedArray)
-                     for key in score_keys))
-    assert_true(all(cv_results[key].dtype == np.float64
-                    for key in score_keys if not key.startswith('rank')))
-    assert_true(cv_results['rank_test_score'].dtype == np.int32)
+    assert (all(isinstance(cv_results[param], np.ma.MaskedArray)
+                for param in param_keys))
+    assert (all(cv_results[key].dtype == object for key in param_keys))
+    assert (any(isinstance(cv_results[key], np.ma.MaskedArray)
+                for key in score_keys)) is False
+    assert (all(cv_results[key].dtype == np.float64
+                for key in score_keys if not key.startswith('rank')))
+    assert (cv_results['rank_test_score'].dtype == np.int32)
 
 
 def check_cv_results_keys(cv_results, param_keys, score_keys, n_cand):
     # Test the search.cv_results_ contains all the required results
     assert_array_equal(sorted(cv_results.keys()),
                        sorted(param_keys + score_keys + ('params',)))
-    assert_true(all(cv_results[key].shape == (n_cand,)
-                    for key in param_keys + score_keys))
-
-
-def check_cv_results_grid_scores_consistency(search):
-    # TODO Remove for sklearn 0.20
-    cv_results = search.cv_results_
-    res_scores = np.vstack(list([cv_results["split%d_test_score" % i]
-                                 for i in range(search.n_splits_)])).T
-    res_means = cv_results["mean_test_score"]
-    res_params = cv_results["params"]
-    n_cand = len(res_params)
-    grid_scores = assert_warns(DeprecationWarning, getattr,
-                               search, 'grid_scores_')
-    assert_equal(len(grid_scores), n_cand)
-    # Check consistency of the structure of grid_scores
-    for i in range(n_cand):
-        assert_equal(grid_scores[i].parameters, res_params[i])
-        assert_array_equal(grid_scores[i].cv_validation_scores,
-                           res_scores[i, :])
-        assert_array_equal(grid_scores[i].mean_validation_score, res_means[i])
+    assert (all(cv_results[key].shape == (n_cand,)
+                for key in param_keys + score_keys))
 
 
 @pytest.mark.parametrize('min_iter', [None, 1, 100])
@@ -242,9 +223,8 @@ def test_hyperband_search_cv_results(min_iter):
         check_cv_results_array_types(cv_results, param_keys, score_keys)
         check_cv_results_keys(cv_results, param_keys, score_keys, n_cand)
         # For random_search, all the param array vals should be unmasked
-        assert_false(any(cv_results['param_C'].mask) or
-                     any(cv_results['param_gamma'].mask))
-        check_cv_results_grid_scores_consistency(search)
+        assert (any(cv_results['param_C'].mask) or
+                any(cv_results['param_gamma'].mask)) is False
 
 
 @pytest.mark.parametrize('rank', [False, True])
