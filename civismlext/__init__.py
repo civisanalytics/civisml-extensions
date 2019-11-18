@@ -7,7 +7,7 @@ from civismlext.hyperband import HyperbandSearchCV
 from civismlext.preprocessing import DataFrameETL
 
 
-__version__ = pkg_resources.get_distribution('civismlext').version
+__version__ = pkg_resources.get_distribution('civisml-extensions').version
 
 __all__ = [
     'StackedRegressor',
