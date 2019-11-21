@@ -7,10 +7,9 @@ def read(fname):
         return _in.read()
 
 
-__version__ = None
-exec(read('civismlext/_version.py'))
+_VERSION = '0.2.0'
 
-setup(version=__version__,
+setup(version=_VERSION,
       name="civisml-extensions",
       author="Civis Analytics",
       author_email="opensource@civisanalytics.com",

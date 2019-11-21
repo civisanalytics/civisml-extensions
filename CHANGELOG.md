@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+
+## [0.2.0] - 2019-11-22
 ### Changed
 - Update tests and requirements.txt to allow sklearn 0.20 and above. (#47)
 - Instead of boolean flag for `dummy_na`, have None/False (no dummying),

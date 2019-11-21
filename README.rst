@@ -27,7 +27,9 @@ This package contains `scikit-learn`_-compatible estimators for stacking (
 ``HyperbandSearchCV``).
 
 Usage of these estimators follows the standard sklearn conventions. Here is an
-example of using the ``StackedClassifier``::
+example of using the ``StackedClassifier``:
+
+    .. code-block:: python
 
     >>> from sklearn.linear_model import LogisticRegression
     >>> from sklearn.ensemble import RandomForestClassifier
@@ -52,7 +54,7 @@ See the doc strings of the various estimators for more information.
 Contributing
 ------------
 
-See ``CONTIBUTING.md`` for information about contributing to this project.
+See ``CONTRIBUTING.md`` for information about contributing to this project.
 
 License
 -------

@@ -1,6 +1,19 @@
-from civismlext.stacking import StackedRegressor  # NOQA
-from civismlext.stacking import StackedClassifier  # NOQA
-from civismlext.nonnegative import NonNegativeLinearRegression  # NOQA
-from civismlext.hyperband import HyperbandSearchCV  # NOQA
-from civismlext.preprocessing import DataFrameETL  # NOQA
-from civismlext._version import __version__  # NOQA
+import pkg_resources
+
+from civismlext.stacking import StackedRegressor
+from civismlext.stacking import StackedClassifier
+from civismlext.nonnegative import NonNegativeLinearRegression
+from civismlext.hyperband import HyperbandSearchCV
+from civismlext.preprocessing import DataFrameETL
+
+
+__version__ = pkg_resources.get_distribution('civisml-extensions').version
+
+__all__ = [
+    'StackedRegressor',
+    'StackedClassifier',
+    'NonNegativeLinearRegression',
+    'HyperbandSearchCV',
+    'DataFrameETL',
+    '__version__',
+]
