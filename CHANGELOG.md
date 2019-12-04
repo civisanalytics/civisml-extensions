@@ -6,8 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
-## [0.2.0] - 2019-11-22
+## [0.2.0] - 2019-12-11
+### Added
+- Turn on Python 3.7 and 3.8 for Travis CI builds. (#50)
+
 ### Changed
+- Removed the upper version bound for sklearn. (#50)
 - Update tests and requirements.txt to allow sklearn 0.20 and above. (#47)
 - Instead of boolean flag for `dummy_na`, have None/False (no dummying),
   'expanded' (matches previous True behavior), and 'all' (dummy NAs
