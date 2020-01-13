@@ -18,5 +18,6 @@ setup(version=_VERSION,
       packages=find_packages(),
       install_requires=read('requirements.txt').splitlines(),
       long_description=read('README.rst'),
+      long_description_content_type='text/x-rst',
       include_package_data=True,
       license="BSD-3")
