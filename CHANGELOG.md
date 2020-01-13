@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.2.1] - 2020-01-15
+### Changed
+- Make stacking compatible with scikit-learn v0.22.1. (#52)
+
 ## [0.2.0] - 2019-12-11
 ### Added
 - Turn on Python 3.7 and 3.8 for Travis CI builds. (#50)
