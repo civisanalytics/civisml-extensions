@@ -1,15 +1,37 @@
 from __future__ import print_function
 from __future__ import division
 
-import numpy as np
 from abc import ABCMeta, abstractmethod
+import warnings
+
+import numpy as np
 import six
 from sklearn.base import BaseEstimator, clone
 from sklearn.utils.metaestimators import if_delegate_has_method
 from sklearn.model_selection import check_cv
 from sklearn.utils import tosequence, check_X_y
 from sklearn.externals.joblib import Parallel, delayed
-from sklearn.model_selection._validation import _index_param_value
+
+try:
+    # TODO: Avoid using a private function from scikit-learn.
+    #  _check_fit_params was added at sklearn 0.22.1
+    from sklearn.utils.validation import _check_fit_params
+except ImportError:
+    # _index_param_value was removed in sklearn 0.22.1
+    # See: https://github.com/scikit-learn/scikit-learn/pull/15863
+    from sklearn.model_selection._validation import _index_param_value
+
+    warnings.warn(
+        'Your civisml-extensions installation uses private functions from '
+        'scikit-learn < v0.22.1. Please upgrade scikit-learn to v0.22.1 '
+        'or beyond. A future version of civisml-extensions will no longer '
+        'be compatible with scikit-learn < v0.22.1.',
+        FutureWarning
+    )
+
+    def _check_fit_params(X, fit_params, train):
+        return {k: _index_param_value(X, v, train)
+                for k, v in fit_params.items()}
 
 
 def _fit_est(est, X, y, **fit_params):
@@ -255,9 +277,9 @@ class BaseStackedModel(BaseEstimator):
             for name, est in self.estimator_list[:-1]:
                 # adapted from sklearn.model_selection._fit_and_predict
                 # Adjust length of sample weights
-                fit_params_est_adjusted = dict([
-                    (k, _index_param_value(X, v, train))
-                    for k, v in fit_params_ests[name].items()])
+                fit_params_est_adjusted = _check_fit_params(
+                    X, fit_params_ests[name], train
+                )
 
                 # Fit estimator on training set and score out-of-sample
                 _jobs.append(delayed(_fit_predict)(

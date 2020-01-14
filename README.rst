@@ -31,21 +31,21 @@ example of using the ``StackedClassifier``:
 
     .. code-block:: python
 
-    >>> from sklearn.linear_model import LogisticRegression
-    >>> from sklearn.ensemble import RandomForestClassifier
-    >>> from civismlext.stacking import StackedClassifier
-    >>> # Note that the final estimator 'metalr' is the meta-estimator
-    >>> estlist = [('rf', RandomForestClassifier()),
-    >>>            ('lr', LogisticRegression()),
-    >>>            ('metalr', LogisticRegression())]
-    >>> mysm = StackedClassifier(estlist)
-    >>> # Set some parameters, if you didn't set them at instantiation
-    >>> mysm.set_params(rf__random_state=7, lr__random_state=8,
-    >>>                 metalr__random_state=9, metalr__C=10**7)
-    >>> # Fit
-    >>> mysm.fit(Xtrain, ytrain)
-    >>> # Predict!
-    >>> ypred = mysm.predict_proba(Xtest)
+        >>> from sklearn.linear_model import LogisticRegression
+        >>> from sklearn.ensemble import RandomForestClassifier
+        >>> from civismlext.stacking import StackedClassifier
+        >>> # Note that the final estimator 'metalr' is the meta-estimator
+        >>> estlist = [('rf', RandomForestClassifier()),
+        >>>            ('lr', LogisticRegression()),
+        >>>            ('metalr', LogisticRegression())]
+        >>> mysm = StackedClassifier(estlist)
+        >>> # Set some parameters, if you didn't set them at instantiation
+        >>> mysm.set_params(rf__random_state=7, lr__random_state=8,
+        >>>                 metalr__random_state=9, metalr__C=10**7)
+        >>> # Fit
+        >>> mysm.fit(Xtrain, ytrain)
+        >>> # Predict!
+        >>> ypred = mysm.predict_proba(Xtest)
 
 You can learn more about stacking and see an example use of the  ``StackedRegressor`` and ``NonNegativeLinearRegression`` estimators in `a talk presented at PyData NYC`_ in November, 2017.
 

@@ -7,7 +7,7 @@ def read(fname):
         return _in.read()
 
 
-_VERSION = '0.2.0'
+_VERSION = '0.2.1'
 
 setup(version=_VERSION,
       name="civisml-extensions",
@@ -18,5 +18,6 @@ setup(version=_VERSION,
       packages=find_packages(),
       install_requires=read('requirements.txt').splitlines(),
       long_description=read('README.rst'),
+      long_description_content_type='text/x-rst',
       include_package_data=True,
       license="BSD-3")
