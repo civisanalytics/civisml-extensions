@@ -2,15 +2,17 @@ from __future__ import print_function
 from __future__ import division
 
 from abc import ABCMeta, abstractmethod
-import warnings
 
 import numpy as np
 import six
+import warnings
+
+from joblib import Parallel, delayed
+
 from sklearn.base import BaseEstimator, clone
 from sklearn.utils.metaestimators import if_delegate_has_method
 from sklearn.model_selection import check_cv
 from sklearn.utils import tosequence, check_X_y
-from sklearn.externals.joblib import Parallel, delayed
 
 try:
     # TODO: Avoid using a private function from scikit-learn.

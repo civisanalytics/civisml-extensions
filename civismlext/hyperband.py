@@ -3,11 +3,13 @@ from __future__ import division
 
 from collections import defaultdict
 from functools import partial
+
 import copy
 import itertools
 import logging
 
 import numpy as np
+from joblib import Parallel, delayed
 from scipy.stats import rankdata
 
 from sklearn.model_selection import ParameterSampler
@@ -18,7 +20,6 @@ from sklearn.model_selection import check_cv
 # I don't want this, but fine.
 from sklearn.model_selection._validation import _fit_and_score
 
-from sklearn.externals.joblib import Parallel, delayed
 from sklearn.utils.fixes import MaskedArray
 from sklearn.utils.validation import indexable
 from sklearn.metrics.scorer import check_scoring
@@ -490,7 +491,8 @@ class HyperbandSearchCV(BaseSearchCV):
                 # An all masked empty array gets created for the key
                 # `"param_%s" % name` at the first occurence of `name`.
                 # Setting the value at an index also unmasks that index
-                param_results["param_%s" % name][cand_i] = value
+                # breakpoint()
+                param_results.get("param_" + name).get(cand_i) = value
 
         results.update(param_results)
 
