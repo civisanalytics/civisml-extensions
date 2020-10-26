@@ -20,7 +20,7 @@ from sklearn.model_selection import check_cv
 # I don't want this, but fine.
 from sklearn.model_selection._validation import _fit_and_score
 
-from sklearn.utils.fixes import MaskedArray
+from numpy.ma import MaskedArray
 from sklearn.utils.validation import indexable
 from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
@@ -482,17 +482,19 @@ class HyperbandSearchCV(BaseSearchCV):
         # Use one MaskedArray and mask all the places where the param is not
         # applicable for that candidate. Use defaultdict as each candidate may
         # not contain all the params
-        param_results = defaultdict(partial(MaskedArray,
-                                            np.empty(n_candidates,),
-                                            mask=True,
-                                            dtype=object))
-        for cand_i, params in enumerate(candidate_params):
+        param_results = {}
+        for cand_idx, params in enumerate(candidate_params):
             for name, value in params.items():
                 # An all masked empty array gets created for the key
                 # `"param_%s" % name` at the first occurence of `name`.
                 # Setting the value at an index also unmasks that index
-                # breakpoint()
-                param_results.get("param_" + name).get(cand_i) = value
+
+                param_name = "param_" + name
+                if param_name not in param_results:
+                    # The array of candidates-to-values not yet definied for this parameter
+                    param_results[param_name] = np.ma.MaskedArray(np.empty(n_candidates,), mask=True, dtype=object, fill_value=-1)
+
+                param_results[param_name][cand_idx] = value
 
         results.update(param_results)
 
