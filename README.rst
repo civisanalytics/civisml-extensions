@@ -34,16 +34,23 @@ example of using the ``StackedClassifier``:
         >>> from sklearn.linear_model import LogisticRegression
         >>> from sklearn.ensemble import RandomForestClassifier
         >>> from civismlext.stacking import StackedClassifier
+        >>> 
+        >>> # Define some Train data and labels
+        >>> Xtrain, ytrain = <train_features>, <train_labels>
+        >>> 
         >>> # Note that the final estimator 'metalr' is the meta-estimator
         >>> estlist = [('rf', RandomForestClassifier()),
         >>>            ('lr', LogisticRegression()),
         >>>            ('metalr', LogisticRegression())]
+        >>> 
         >>> mysm = StackedClassifier(estlist)
         >>> # Set some parameters, if you didn't set them at instantiation
         >>> mysm.set_params(rf__random_state=7, lr__random_state=8,
         >>>                 metalr__random_state=9, metalr__C=10**7)
+        >>> 
         >>> # Fit
         >>> mysm.fit(Xtrain, ytrain)
+        >>> 
         >>> # Predict!
         >>> ypred = mysm.predict_proba(Xtest)
 
@@ -54,7 +61,7 @@ See the doc strings of the various estimators for more information.
 Contributing
 ------------
 
-See ``CONTRIBUTING.md`` for information about contributing to this project.
+Please see ``CONTRIBUTING.md`` for information about contributing to this project.
 
 License
 -------
