@@ -1,8 +1,9 @@
-scikit-learn>=0.18.1
-scipy>=0.14,<2.0
+joblib>=0.14.0
 numpy>=1.12,<2.0
-pandas~=0.19; python_version >= '3.5'
+pandas~=0.25.3; python_version == '3.8'
+pandas==0.19; python_version == '3.5'
 pandas>=0.19,<0.21; python_version == '3.4'
 pandas>=0.19,<=0.23; python_version == '2.7'
+scikit-learn>=0.18.1
+scipy>=0.14,<2.0
 six~=1.10
-joblib>=0.17.0
