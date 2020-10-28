@@ -30,4 +30,5 @@ setup(version=_VERSION,
       long_description_content_type='text/x-rst',
       include_package_data=True,
       license="BSD-3",
-      classifiers=CLASSIFIERS)
+      classifiers=CLASSIFIERS,
+      python_requires=">=3.6")
