@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.3.0] - 2020-10-28
+### Changed
+- Fix dependencies to make stacking compatible with scikit-learn 0.23+ (#54)
+- Removed support for Python <3.6. (#55)
+
 ## [0.2.1] - 2020-01-15
 ### Changed
 - Make stacking compatible with scikit-learn v0.22.1. (#52)

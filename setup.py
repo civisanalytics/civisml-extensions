@@ -1,13 +1,22 @@
 import os
 from setuptools import find_packages, setup
 
+CLASSIFIERS = [
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3 :: Only',
+]
+
 
 def read(fname):
     with open(os.path.join(os.path.dirname(__file__), fname)) as _in:
         return _in.read()
 
 
-_VERSION = '0.2.1'
+_VERSION = '0.3.0'
 
 setup(version=_VERSION,
       name="civisml-extensions",
@@ -20,4 +29,5 @@ setup(version=_VERSION,
       long_description=read('README.rst'),
       long_description_content_type='text/x-rst',
       include_package_data=True,
-      license="BSD-3")
+      license="BSD-3",
+      classifiers=CLASSIFIERS)
