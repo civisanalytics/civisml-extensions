@@ -1,13 +1,14 @@
 from __future__ import print_function
 from __future__ import division
 
-from collections import defaultdict
-from functools import partial
 import copy
 import itertools
 import logging
 
 import numpy as np
+
+from numpy.ma import MaskedArray
+from joblib import Parallel, delayed
 from scipy.stats import rankdata
 
 from sklearn.model_selection import ParameterSampler
@@ -18,8 +19,6 @@ from sklearn.model_selection import check_cv
 # I don't want this, but fine.
 from sklearn.model_selection._validation import _fit_and_score
 
-from sklearn.externals.joblib import Parallel, delayed
-from sklearn.utils.fixes import MaskedArray
 from sklearn.utils.validation import indexable
 from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
@@ -478,21 +477,27 @@ class HyperbandSearchCV(BaseSearchCV):
 
         best_index = np.flatnonzero(results["rank_test_score"] == 1)[0]
 
-        # Use one MaskedArray and mask all the places where the param is not
+        # Use one np.ma.MaskedArray and mask places where param not
         # applicable for that candidate. Use defaultdict as each candidate may
         # not contain all the params
-        param_results = defaultdict(partial(MaskedArray,
-                                            np.empty(n_candidates,),
-                                            mask=True,
-                                            dtype=object))
-        for cand_i, params in enumerate(candidate_params):
+        param_vals = {}
+        for cand_idx, params in enumerate(candidate_params):
             for name, value in params.items():
                 # An all masked empty array gets created for the key
                 # `"param_%s" % name` at the first occurence of `name`.
                 # Setting the value at an index also unmasks that index
-                param_results["param_%s" % name][cand_i] = value
 
-        results.update(param_results)
+                param = "param_" + name
+                if param not in param_vals:
+
+                    # Map candidates-to-values. Defaults to a masked np.empty
+                    param_vals[param] = MaskedArray(np.empty(n_candidates,),
+                                                    mask=True,
+                                                    dtype=object)
+
+                param_vals[param][cand_idx] = value
+
+        results.update(param_vals)
 
         # Store a list of param dicts at the key 'params'
         results['params'] = candidate_params
