@@ -11,10 +11,10 @@ from numpy.ma import MaskedArray
 from joblib import Parallel, delayed
 from scipy.stats import rankdata
 
-from sklearn.model_selection import ParameterSampler
-from sklearn.model_selection._search import BaseSearchCV
 from sklearn.base import is_classifier, clone
-from sklearn.model_selection import check_cv
+from sklearn.model_selection import ParameterSampler, check_cv
+
+from sklearn.model_selection._search import BaseSearchCV
 
 # I don't want this, but fine.
 from sklearn.model_selection._validation import _fit_and_score
