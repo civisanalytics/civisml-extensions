@@ -20,7 +20,7 @@ from sklearn.model_selection import check_cv
 from sklearn.model_selection._validation import _fit_and_score
 
 from sklearn.utils.validation import indexable
-from sklearn.metrics import check_scoring
+from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
 
 log = logging.getLogger(__name__)

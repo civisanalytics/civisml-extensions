@@ -7,8 +7,8 @@ from scipy.stats import expon, randint, rankdata
 import numpy as np
 
 from sklearn.base import BaseEstimator, ClassifierMixin
-from numpy.testing import assert_equal, assert_array_equal
-
+from sklearn.utils.testing import assert_equal
+from sklearn.utils.testing import assert_array_equal
 from sklearn.utils import check_random_state
 from sklearn.datasets import make_classification
 from sklearn.svm import SVC
