@@ -8,7 +8,7 @@ from sklearn.utils import check_X_y
 from sklearn.base import RegressorMixin
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils.extmath import safe_sparse_dot
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model._base import LinearModel
 
 
 def _rescale_data(X, y, sample_weight):
@@ -23,7 +23,7 @@ def _rescale_data(X, y, sample_weight):
     return X, y
 
 
-class NonNegativeLinearRegression(LinearRegression, RegressorMixin):
+class NonNegativeLinearRegression(LinearModel, RegressorMixin):
     """Non-negative least squares linear regression.
 
     Parameters
