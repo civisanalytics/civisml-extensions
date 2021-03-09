@@ -20,8 +20,13 @@ from sklearn.model_selection import check_cv
 from sklearn.model_selection._validation import _fit_and_score
 
 from sklearn.utils.validation import indexable
-from sklearn.metrics.scorer import check_scoring
 from sklearn.utils import check_random_state
+
+try:
+    from sklearn.metrics import check_scoring
+except ModuleNotFoundError:
+    from sklearn.metrics.scorer import check_scoring  # <0.24.1
+
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +105,7 @@ class HyperbandSearchCV(BaseSearchCV):
               spawned
             - A string, giving an expression as a function of n_jobs,
               as in '2*n_jobs'
-    iid : boolean, default=True
+    iid (deprecated) : boolean, default=True
         If True, the data is assumed to be identically distributed across
         the folds, and the loss minimized is the total loss per sample,
         and not the mean loss across the folds.
@@ -242,7 +247,7 @@ class HyperbandSearchCV(BaseSearchCV):
 
     def __init__(self, estimator, param_distributions, cost_parameter_max,
                  cost_parameter_min=None, eta=3,
-                 scoring=None, n_jobs=1, iid=True, refit=True,
+                 scoring=None, n_jobs=1, refit=True,
                  cv=None, verbose=0, pre_dispatch='2*n_jobs',
                  random_state=None, error_score='raise',
                  return_train_score=True):
@@ -253,7 +258,7 @@ class HyperbandSearchCV(BaseSearchCV):
         self.random_state = random_state
         super(HyperbandSearchCV, self).__init__(
             estimator=estimator, scoring=scoring,
-            n_jobs=n_jobs, iid=iid, refit=refit, cv=cv, verbose=verbose,
+            n_jobs=n_jobs, refit=refit, cv=cv, verbose=verbose,
             pre_dispatch=pre_dispatch, error_score=error_score,
             return_train_score=return_train_score)
 
@@ -450,7 +455,7 @@ class HyperbandSearchCV(BaseSearchCV):
              fit_time, score_time, parameters) = zip(*out)
         else:
             (test_scores, test_sample_counts,
-             fit_time, score_time, parameters) = zip(*out)
+                fit_time, score_time, parameters) = zip(*out)
 
         candidate_params = parameters[::n_splits]
         n_candidates = len(candidate_params)
@@ -465,7 +470,7 @@ class HyperbandSearchCV(BaseSearchCV):
         results = self._store_results(
             results, n_splits, n_candidates, 'test_score',
             test_scores, splits=True, rank=True,
-            weights=test_sample_counts if self.iid else None)
+            weights=test_sample_counts)
         if self.return_train_score:
             results = self._store_results(
                 results, n_splits, n_candidates,
