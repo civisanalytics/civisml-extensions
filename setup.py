@@ -16,7 +16,7 @@ def read(fname):
         return _in.read()
 
 
-_VERSION = '0.3.0'
+_VERSION = '0.3.1'
 
 setup(version=_VERSION,
       name="civisml-extensions",
