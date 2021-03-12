@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.3.1] - 2020-03-15
+### Changed
+- Added upper bound `<0.24.0` for scikit-learn version (#59)
+
 ## [0.3.0] - 2020-10-28
 ### Changed
 - Fix dependencies to make stacking compatible with scikit-learn 0.23+ (#54)
